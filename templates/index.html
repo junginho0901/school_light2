@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>보행자 신호등 & 오디오 분류기 시스템</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>보행자 신호등 & 오디오 분류기 시스템</h1>
+            <nav>
+                <a href="{{ url_for('data_management') }}" class="nav-button">데이터 관리</a>
+                <button id="dashboardButton" class="nav-button">대시보드 보기</button>
+                <a href="{{ url_for('forecast_page') }}" class="nav-button">등하원 소리 예측</a>
+            </nav>
+        </header>
+        <main>
+            <div class="traffic-light-container">
+                <div class="pedestrian-light">
+                    <div class="light red"></div>
+                    <div class="light green"></div>
+                </div>
+                <div class="timer"></div>
+            </div>
+            <div class="control-panel">
+                <button id="recordButton">녹음 시작</button>
+            </div>
+            <div class="results-panel">
+                <h2>예측 결과</h2>
+                <div id="results"></div>
+            </div>
+        </main>
+    </div>
+
+    <div id="dashboardModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>소리 분석 대시보드</h2>
+            <div class="charts-container">
+                <div class="chart-item">
+                    <h3>소리 클래스별 감지 빈도</h3>
+                    <canvas id="classDistributionChart"></canvas>
+                </div>
+                <div class="chart-item">
+                    <h3>시간대별 소리 감지 패턴</h3>
+                    <canvas id="hourlyDetectionChart"></canvas>
+                </div>
+                <div class="chart-item">
+                    <h3>시간대별 신호 조정 횟수</h3>
+                    <canvas id="signalAdjustmentChart"></canvas>
+                </div>
+            </div>
+            <button id="resetButton" class="btn">데이터 리셋</button>
+        </div>
+    </div>
+
+    <div id="notificationDiv" class="notification-container"></div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

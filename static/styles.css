@@ -1,0 +1,236 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f0f0f0;
+}
+
+.container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+header {
+    margin-bottom: 20px;
+}
+
+h1 {
+    color: #333;
+}
+
+.traffic-light-container {
+    margin-bottom: 20px;
+}
+
+.pedestrian-light {
+    width: 100px;
+    height: 200px;
+    background-color: #333;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    padding: 10px;
+    margin: 0 auto;
+}
+
+.light {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    opacity: 0.3;
+}
+
+.red { background-color: #ff0000; }
+.green { background-color: #00ff00; }
+
+.light.active {
+    opacity: 1;
+    box-shadow: 0 0 20px #fff;
+}
+
+.timer {
+    font-size: 24px;
+    margin-top: 10px;
+}
+
+button {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+#dashboardButton {
+    background-color: #008CBA;
+}
+
+#dashboardButton:hover {
+    background-color: #007B9A;
+}
+
+.results-panel {
+    margin-top: 20px;
+    text-align: left;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+#results p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.modal-content {
+    background-color: #ffffff; /* 흰색 배경 */
+    color: #333333; /* 어두운 텍스트 색상 */
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 800px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.modal {
+    display: none; /* 기본적으로 숨김 */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+}
+
+/* 차트 영역 스타일 */
+.chart-item {
+    background-color: #f8f9fa; /* 연한 회색 배경 */
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+/* 차트 제목 스타일 */
+.chart-item h3 {
+    color: #333333;
+    margin-top: 0;
+}
+
+/* 모달 닫기 버튼 스타일 */
+.close {
+    color: #aaaaaa;
+}
+
+.close:hover,
+.close:focus {
+    color: #000000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* 버튼 스타일 */
+.btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.btn:hover {
+    background-color: #0056b3;
+}
+
+
+.charts-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    
+}
+
+.chart-item {
+    width: 45%;
+    margin-bottom: 20px;
+    height: 400px;
+}
+
+@media (max-width: 768px) {
+    .chart-item {
+        width: 100%;
+    }
+}
+
+#resetButton {
+    background-color: #f44336;
+    margin-top: 20px;
+}
+
+#resetButton:hover {
+    background-color: #d32f2f;
+}
+
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.notification {
+    background-color: #4CAF50;
+    color: white;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    opacity: 0.9;
+}
+
+.nav-button {
+    display: inline-block;
+    padding: 10px 20px;
+    margin: 10px;
+    background-color: #4CAF50;
+    color: white;
+    text-decoration: none;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.nav-button:hover {
+    background-color: #45a049;
+}
+
+nav {
+    text-align: center;
+    margin-bottom: 20px;
+}
+

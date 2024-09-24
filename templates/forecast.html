@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>등하원 소리 예측</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>등하원 소리 예측</h1>
+            <nav>
+                <a href="{{ url_for('index') }}" class="nav-button">메인 페이지로 돌아가기</a>
+            </nav>
+        </header>
+        <main>
+            <button id="runForecast" class="btn btn-primary">예측 실행</button>
+            <div id="loadingMessage" style="display: none;">예측 중... 잠시만 기다려주세요.</div>
+            <div id="forecastResults">
+                <div id="dayForecast"></div>
+                <div id="weekForecast"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            $('#runForecast').click(function() {
+                $('#loadingMessage').show();
+                $('#forecastResults').hide();
+                $.ajax({
+                    url: '/run_forecast',
+                    method: 'POST',
+                    success: function(response) {
+                        $('#dayForecast').html('<img src="data:image/png;base64,' + response.day_forecast + '" />');
+                        $('#weekForecast').html('<img src="data:image/png;base64,' + response.week_forecast + '" />');
+                        $('#loadingMessage').hide();
+                        $('#forecastResults').show();
+                    },
+                    error: function() {
+                        alert('예측 실행 중 오류가 발생했습니다.');
+                        $('#loadingMessage').hide();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

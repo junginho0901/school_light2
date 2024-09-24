@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>데이터 관리</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        nav {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        nav a {
+            margin: 0 10px;
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        audio {
+            width: 200px;
+        }
+        img {
+            max-width: 100px;
+            max-height: 100px;
+            cursor: pointer;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.9);
+        }
+        .modal-content {
+            margin: auto;
+            display: block;
+            width: 80%;
+            max-width: 700px;
+        }
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            text-align: center;
+            cursor: pointer;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .dropdown {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>고신뢰도 데이터 관리</h1>
+        <nav>
+            <a href="{{ url_for('index') }}" class="nav-button">메인 페이지로 돌아가기</a>
+        </nav>
+        
+        <!-- 전체 폴더 다운로드 버튼 -->
+        <button onclick="downloadAllFolder()" class="btn btn-success">전체 폴더 다운로드</button>
+        
+        <!-- 클래스 선택 드롭다운과 클래스 다운로드 버튼 -->
+        <div class="dropdown">
+            <select id="classDropdown" class="btn btn-secondary">
+                <option value="기차">기차</option>
+                <option value="등하원소리">등하원소리</option>
+                <option value="비행기">비행기</option>
+                <option value="이륜차 주행음">이륜차 주행음</option>
+                <option value="이륜차경적">이륜차경적</option>
+                <option value="지하철">지하철</option>
+                <option value="차량경적">차량경적</option>
+                <option value="차량사이렌">차량사이렌</option>
+                <option value="차량주행음">차량주행음</option>
+                <option value="헬리콥터">헬리콥터</option>
+            </select>
+            <button id="downloadClassFolder" class="btn btn-secondary">선택한 클래스 폴더 다운로드</button>
+        </div>
+
+        <table id="data-table">
+            <thead>
+                <tr>
+                    <th>번호</th>
+                    <th>파일명</th>
+                    <th>분류된 클래스</th>
+                    <th>정확도</th>
+                    <th>저장된 시점</th>
+                    <th>오디오</th>
+                    <th>스펙트로그램</th>
+                    <th>다운로드</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in data_list %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ item.file_name }}</td>
+                    <td>{{ item.class }}</td>
+                    <td>{{ item.confidence | round(2) }}%</td>
+                    <td>{{ item.timestamp }}</td>
+                    <td>
+                        <audio controls>
+                            <source src="{{ item.audio_path }}" type="audio/wav">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </td>
+                    <td>
+                        {% if item.spectrogram_path %}
+                        <img src="{{ item.spectrogram_path }}" alt="Spectrogram" class="spectrogram-image">
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="download-btn" data-filename="{{ item.file_name }}" data-class="{{ item.class }}">다운로드</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>        
+    </div>
+
+    <div id="imageModal" class="modal">
+        <span class="close">&times;</span>
+        <img class="modal-content" id="modalImage">
+        <div id="caption"></div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            var table = $('#data-table').DataTable({
+                ajax: {
+                    url: '/get-data-list',
+                    dataSrc: ''
+                },
+                columns: [
+                    { data: null, render: function (data, type, row, meta) {
+                        return meta.row + 1;
+                    }},
+                    { data: 'file_name' },
+                    { data: 'class' },
+                    { data: 'confidence', render: function(data, type, row) {
+                        return (data * 100).toFixed(2) + '%';
+                    }},
+                    { data: 'timestamp' },
+                    { data: 'audio_path', render: function(data, type, row) {
+                        return '<audio controls><source src="' + data + '" type="audio/wav">Your browser does not support the audio element.</audio>';
+                    }},
+                    { data: 'spectrogram_path', render: function(data, type, row) {
+                        if (data) {
+                            return '<img src="' + data + '" alt="Spectrogram" class="spectrogram-image">';
+                        } else {
+                            return 'N/A';
+                        }
+                    }},
+                    { data: null, render: function(data, type, row) {
+                        return '<button class="download-btn" data-filename="' + row.file_name + '" data-class="' + row.class + '">다운로드</button>';
+                    }}
+                ],
+                order: [[4, 'desc']]  // 저장된 시점을 기준으로 내림차순 정렬
+            });
+
+            // 이미지 모달
+            var modal = document.getElementById("imageModal");
+            var modalImg = document.getElementById("modalImage");
+            var span = document.getElementsByClassName("close")[0];
+
+            $('#data-table').on('click', '.spectrogram-image', function() {
+                modal.style.display = "block";
+                modalImg.src = this.src;
+            });
+
+            span.onclick = function() {
+                modal.style.display = "none";
+            }
+
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+
+            // 클래스 폴더 다운로드 버튼 클릭 시 선택된 클래스 다운로드
+            $('#downloadClassFolder').on('click', function() {
+                var selectedClass = $('#classDropdown').val();
+                window.location.href = '/download-folder/' + encodeURIComponent(selectedClass);
+            });
+
+            // 다운로드 버튼 클릭 이벤트 처리
+            $('#data-table').on('click', '.download-btn', function() {
+                var fileName = $(this).data('filename');
+                var className = $(this).data('class');
+                downloadFiles(fileName, className);
+            });
+        });
+
+        function downloadFiles(fileName, className) {
+            const downloadUrl = `/download-file/${encodeURIComponent(className)}/${encodeURIComponent(fileName)}`;
+            
+            fetch(downloadUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `${fileName.replace('.wav', '')}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                })
+                .catch(error => {
+                    console.error('Download failed:', error);
+                    alert('파일 다운로드에 실패했습니다.');
+                });
+        }
+
+        function downloadAllFolder() {
+            window.location.href = '/download-folder/high_confidence_data';
+        }
+    </script>
+</body>
+</html>
