@@ -751,6 +751,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 1000); // 1초마다 현재 시간과 비교
     });
 
+
+    
     // 제어 중지 버튼 클릭 시
     stopControlButton.addEventListener('click', function() {
         clearInterval(controlInterval);  // 설정된 setInterval 중지
