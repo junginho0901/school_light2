@@ -33,7 +33,7 @@ plt.rc('font', family='Malgun Gothic')
 plt.rcParams['axes.unicode_minus'] = False
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # 경로 설정
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -140,6 +140,8 @@ def load_adjustments_from_csv():
     except FileNotFoundError:
         print(f"{adjustment_csv_file_path} not found. Starting with empty data.")
 
+initialize_csv()
+initialize_adjustment_csv()
 
 def create_spectrogram(y, sr):
     S = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128, fmax=8000)
@@ -148,8 +150,6 @@ def create_spectrogram(y, sr):
     print("Spectrogram shape:", S_normalized.shape)  # 스펙트로그램 데이터 확인
     return S_normalized
 
-
-import librosa.display  # 이 부분을 명확하게 import
 
 import matplotlib.pyplot as plt
 
@@ -171,9 +171,8 @@ def save_high_confidence_data(audio_data, sr, spectrogram, predicted_class, conf
         plt.colorbar(img, format='%+2.0f dB')
         plt.title(f'{predicted_class} (신뢰도: {confidence:.2f})')
 
-        # Figure 객체를 명시적으로 그리기
-        fig.canvas.draw()  # 렌더러 초기화
-
+        # 렌더러 초기화 및 스펙트로그램 저장
+        fig.canvas.draw()  # RendererAgg 초기화
         plt.tight_layout()
         plt.savefig(spectrogram_path)
 
@@ -181,9 +180,7 @@ def save_high_confidence_data(audio_data, sr, spectrogram, predicted_class, conf
     except Exception as e:
         logging.error(f"고신뢰 데이터 저장 중 오류 발생: {e}")
     finally:
-        plt.close(fig)  # figure를 반드시 닫아 메모리 누수 방지
-
-
+        plt.close(fig)  # figure를 닫아 메모리 누수를 방지
 
 
 
@@ -298,47 +295,57 @@ def predict():
         'confidence': float(confidence)
     })
 
+# 전역 변수 초기화 함수 추가
+def initialize_global_variables():
+    global class_counts, hourly_detections, hourly_signal_adjustments, signal_adjustments
+    class_counts = defaultdict(lambda: defaultdict(int))
+    hourly_detections = defaultdict(lambda: defaultdict(int))
+    hourly_signal_adjustments = defaultdict(int)
+    signal_adjustments = 0
+
+# 애플리케이션 시작 시 전역 변수 초기화
+initialize_global_variables()
 @app.route('/stats')
 def get_stats():
-    current_time = datetime.now()
-    hourly_data = []
-    hourly_signal_data = []
-    class_counts_24h = defaultdict(int)
+    try:
+        current_time = datetime.now()
+        hourly_data = []
+        hourly_signal_data = []
+        class_counts_24h = defaultdict(int)
 
-    for i in range(24):
-        hour = (current_time - timedelta(hours=i)).strftime('%Y-%m-%d %H:00:00')
-        
-        counts = dict(hourly_detections[hour])
-        if not counts:
-            counts = {class_name: 0 for class_name in index_to_class.values()}
-        hourly_data.append({
-            'hour': hour,
-            'counts': counts
-        })
+        for i in range(24):
+            hour = (current_time - timedelta(hours=i)).strftime('%Y-%m-%d %H:00:00')
+            
+            counts = dict(hourly_detections.get(hour, {}))
+            if not counts:
+                counts = {class_name: 0 for class_name in index_to_class.values()}
+            hourly_data.append({
+                'hour': hour,
+                'counts': counts
+            })
 
-        for class_name, count in counts.items():
-            class_counts_24h[class_name] += count
+            for class_name, count in counts.items():
+                class_counts_24h[class_name] += count
 
-        signal_adjust_count = hourly_signal_adjustments.get(hour, 0)
-        hourly_signal_data.append({
-            'hour': hour,
-            'signal_adjustments': signal_adjust_count
-        })
+            signal_adjust_count = hourly_signal_adjustments.get(hour, 0)
+            hourly_signal_data.append({
+                'hour': hour,
+                'signal_adjustments': signal_adjust_count
+            })
 
-    # 로그로 서버에서 전송하는 데이터 구조 확인
-    print("Stats data being sent:", {
-        'class_counts': dict(class_counts_24h),
-        'hourly_data': hourly_data,
-        'hourly_signal_data': hourly_signal_data,
-        'signal_adjustments': signal_adjustments
-    })
+        stats_data = {
+            'class_counts': dict(class_counts_24h),
+            'hourly_data': hourly_data,
+            'hourly_signal_data': hourly_signal_data,
+            'signal_adjustments': signal_adjustments
+        }
 
-    return jsonify({
-        'class_counts': dict(class_counts_24h),
-        'hourly_data': hourly_data,
-        'hourly_signal_data': hourly_signal_data,
-        'signal_adjustments': signal_adjustments
-    })
+        print("Stats data being sent:", stats_data)  # 로깅 추가
+
+        return jsonify(stats_data)
+    except Exception as e:
+        print(f"Error in get_stats: {str(e)}")  # 오류 로깅
+        return jsonify({'error': 'An error occurred while fetching stats'}), 500
 
 
 
@@ -471,20 +478,17 @@ def download_file(folder, filename):
 
 @app.route('/download-folder/<folder_name>', methods=['GET'])
 def download_folder(folder_name):
-    # 'high_confidence_data' 경로 제거
     if 'high_confidence_data' in folder_name:
         folder_name = folder_name.replace('high_confidence_data', '').strip('/')
 
     folder_name = unquote(folder_name)
 
-    # 경로 설정
     audio_folder_path = os.path.join(parent_dir, 'high_confidence_data', 'audio', folder_name)
     spectrogram_folder_path = os.path.join(parent_dir, 'high_confidence_data', 'spectrogram', folder_name)
 
     if os.path.exists(audio_folder_path):
         try:
             memory_file = io.BytesIO()
-            # ZIP 파일 생성
             with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
                 for root, dirs, files in os.walk(audio_folder_path):
                     for file in files:
@@ -492,26 +496,19 @@ def download_folder(folder_name):
                             audio_file_path = os.path.join(root, file)
                             zf.write(audio_file_path, os.path.relpath(audio_file_path, audio_folder_path))
                             
-                            # 스펙트로그램 파일 추가
                             spectrogram_file = file.replace('.wav', '.png')
                             spectrogram_file_path = os.path.join(spectrogram_folder_path, spectrogram_file)
                             if os.path.exists(spectrogram_file_path):
                                 zf.write(spectrogram_file_path, os.path.relpath(spectrogram_file_path, spectrogram_folder_path))
 
             memory_file.seek(0)
-
-            # 폴더 이름이 비어 있을 때 처리 (전체 폴더를 다운로드하는 경우)
-            if not folder_name:
-                folder_name = "all_files"
-
-            # 다운로드 시 ZIP 파일 이름을 설정, 확장자 .zip 명시적으로 추가
-            return send_file(memory_file, download_name=f"{folder_name}.zip", as_attachment=True, mimetype='application/zip')
-
+            return send_file(memory_file, download_name=f"All_of_files.zip", as_attachment=True, mimetype='application/zip')
         except Exception as e:
             print(f"Error during ZIP file creation: {str(e)}")
             return abort(500, description="An error occurred while creating the ZIP file")
     else:
         return abort(404, description="Folder not found")
+
 
 
 # ... (기존 코드는 그대로 유지)

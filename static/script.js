@@ -39,6 +39,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     var modal = document.getElementById("imageModal");
+    
+    function hideDashboard() {
+        dashboardModal.style.display = "none";
+        if (updateInterval) {
+            clearInterval(updateInterval);
+            updateInterval = null;
+        }
+    }
+    
+    
     var modalImg = document.getElementById("modalImage");
     var captionText = document.getElementById("caption");
     var span = document.getElementsByClassName("close")[0];
@@ -211,43 +221,59 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateTrafficLight() {
+        // 모든 불을 비활성화
         lights.forEach(light => light.classList.remove('active'));
         lights[currentLight].classList.add('active');
-
+    
+        // 타이머가 0이 되었을 때
         if (timeLeft === 0) {
-            currentLight = (currentLight + 1) % 2;
+            currentLight = (currentLight + 1) % 2; // 빨간불 <-> 초록불 전환
             if (currentLight === 0) {
+                // 빨간불 상태
                 isRedLight = true;
-                timeLeft = normalDurations[currentLight];
-                consecutiveSchoolSounds = 0;
+                timeLeft = normalDurations[currentLight]; // 기본 빨간불 시간 설정
+                consecutiveSchoolSounds = 0; // 연속 소리 감지 초기화
             } else {
+                // 초록불 상태
                 isRedLight = false;
                 if (isExtendedGreenScheduled) {
+                    // 초록불 시간에 10초 추가
                     timeLeft = normalDurations[currentLight] + 10;
-                    notifySignalAdjustment();
-                    isExtendedGreenScheduled = false;
+                    notifySignalAdjustment(); // 신호 조정 요청 보내기
+                    isExtendedGreenScheduled = false; // 연장 후 초기화
                 } else {
+                    // 기본 초록불 시간 설정
                     timeLeft = normalDurations[currentLight];
                 }
             }
         }
-
+    
+        // 남은 시간을 화면에 표시
         timer.textContent = timeLeft;
         timeLeft--;
-
+    
+        // 1초 후 다시 실행
         setTimeout(updateTrafficLight, 1000);
     }
-
+    
+    
     function showDashboard() {
         dashboardModal.style.display = "block";
-        initCharts();
-        updateCharts();
-        updateInterval = setInterval(updateCharts, 5000);
+        initCharts();  // 차트 초기화
+        updateCharts();  // 초기 데이터 업데이트
+    
+        if (!updateInterval) {  // 중복 실행 방지
+            updateInterval = setInterval(updateCharts, 5000);  // 5초마다 차트 업데이트
+        }
     }
+    
 
     function hideDashboard() {
         dashboardModal.style.display = "none";
-        clearInterval(updateInterval);
+        if (updateInterval) {
+            clearInterval(updateInterval);  // 타이머 중지
+            updateInterval = null;  // 타이머 상태 초기화
+        }
     }
 
     function initCharts() {
@@ -390,11 +416,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateCharts() {
+        if (!classDistributionChart || !hourlyDetectionChart || !signalAdjustmentChart) {
+            console.warn("Charts are not initialized.");
+            return;  // 차트가 초기화되지 않았으면 함수 종료
+        }
+    
         console.log("Updating charts...");
         fetch('/stats')
             .then(response => response.json())
             .then(data => {
-                // 데이터 확인을 위한 로그 추가
                 console.log("Received data:", data);
     
                 if (data && data.class_counts && data.hourly_data && data.hourly_signal_data) {
@@ -409,7 +439,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     
+    
+    
+    
     function updateClassDistributionChart(classCounts) {
+        if (!classDistributionChart) {
+            console.error("classDistributionChart is not initialized.");
+            return;  // 차트가 초기화되지 않았으면 함수 종료
+        }
+    
         if (!classCounts || Object.keys(classCounts).length === 0) {
             console.warn("classCounts is undefined or empty.");
             return;  // 데이터가 없으면 함수 종료
@@ -422,6 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
         classDistributionChart.data.datasets[0].data = data;
         classDistributionChart.update();
     }
+    
     
     
 
@@ -456,7 +495,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 console.log('Signal adjusted:', data);
-                updateCharts();
+                updateCharts();  // 차트가 초기화된 경우에만 갱신
             })
             .catch(error => console.error('Error adjusting signal:', error));
     }
@@ -468,12 +507,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(data => {
                     if (data.success) {
                         alert('데이터가 성공적으로 리셋되었습니다.');
-                        updateCharts();
+                        updateCharts();  // 차트가 초기화된 경우에만 갱신
                     } else {
                         alert('데이터 리셋 중 오류가 발생했습니다: ' + data.message);
                     }
-                })
-                .catch(error => {
                 })
                 .catch(error => {
                     console.error('Error resetting data:', error);
@@ -546,4 +583,120 @@ document.addEventListener('DOMContentLoaded', function() {
     if (downloadAllFolderBtn) {
         downloadAllFolderBtn.addEventListener('click', downloadAllFolder);
     }
+
+
+    let timePeriodCount = 1;
+    let isAutoControlActive = false;
+
+    const addTimeButton = document.getElementById('addTimeButton');
+    const startControlButton = document.getElementById('startControl');
+    const stopControlButton = document.getElementById('stopControl');
+    const timePeriodsDiv = document.getElementById('timePeriodsDiv'); // timePeriodsDiv가 정의되었는지 확인
+
+    let controlInterval;
+
+
+    // 시간대 추가 버튼 이벤트
+    addTimeButton.addEventListener('click', function() {
+        timePeriodCount++;
+        const newTimePeriod = document.createElement('div');
+        newTimePeriod.classList.add('time-period');
+        newTimePeriod.innerHTML = `
+            <label for="startTime${timePeriodCount}">시작 시간:</label>
+            <input type="time" id="startTime${timePeriodCount}" name="startTime">
+            <label for="endTime${timePeriodCount}">종료 시간:</label>
+            <input type="time" id="endTime${timePeriodCount}" name="endTime">
+            <button class="remove-time-btn">삭제</button>
+        `;
+        
+        // 삭제 버튼 이벤트 리스너 추가
+        const removeButton = newTimePeriod.querySelector('.remove-time-btn');
+        removeButton.addEventListener('click', function() {
+            if (timePeriodCount === 1) {
+                // 하나만 남았을 경우 값 초기화
+                document.getElementById('startTime1').value = '';
+                document.getElementById('endTime1').value = '';
+            } else {
+                // 입력 창 삭제
+                timePeriodsDiv.removeChild(newTimePeriod);
+                timePeriodCount--;
+            }
+        });
+
+        // 새 시간대 입력창 추가
+        timePeriodsDiv.appendChild(newTimePeriod);
+    });
+    
+        // 첫 번째 삭제 버튼에 대한 초기화 로직도 추가
+        const initialRemoveButton = document.querySelector('.remove-time-btn');
+        initialRemoveButton.addEventListener('click', function() {
+            if (timePeriodCount === 1) {
+                // 하나만 남았을 경우 값 초기화
+                document.getElementById('startTime1').value = '';
+                document.getElementById('endTime1').value = '';
+            } else {
+                // 입력 창 삭제
+                const timePeriod = this.parentElement;
+                timePeriodsDiv.removeChild(timePeriod);
+                timePeriodCount--;
+            }
+        });
+    
+
+    // 제어 시작 버튼 클릭 시 신호등 초록불 시간을 10초씩 추가
+    // 제어 시작 버튼 클릭 시 신호등 초록불 시간을 10초씩 추가
+    startControlButton.addEventListener('click', function() {
+        if (isAutoControlActive) {
+            alert("자동 제어가 이미 활성화되어 있습니다.");
+            return;
+        }
+
+        // 자동 제어나 수동 제어를 활성화
+        startControlButton.disabled = true;
+        stopControlButton.disabled = false;
+        
+        const recordButton = document.getElementById('recordButton');
+        recordButton.disabled = true;  // 녹음 버튼 비활성화
+
+        // 클릭 이벤트를 막는 코드 추가
+        recordButton.addEventListener('click', function(event) {
+            if (recordButton.disabled) {
+                event.preventDefault();  // 클릭 방지
+                return;  // 클릭 이벤트 실행되지 않도록
+            }
+        });
+
+        isAutoControlActive = true;
+
+        controlInterval = setInterval(function() {
+            const currentTime = new Date();
+            const currentHourMinute = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}`;
+
+            for (let i = 1; i <= timePeriodCount; i++) {
+                const startTime = document.getElementById(`startTime${i}`).value;
+                const endTime = document.getElementById(`endTime${i}`).value;
+
+                if (startTime && endTime && currentHourMinute >= startTime && currentHourMinute <= endTime) {
+                    console.log("자동 제어 활성화 - 10초 추가");
+                    isExtendedGreenScheduled = true; // 초록불 연장 예약
+                }
+            }
+        }, 1000); // 1초마다 현재 시간과 비교
+    });
+
+    // 제어 중지 버튼 클릭 시
+    stopControlButton.addEventListener('click', function() {
+        clearInterval(controlInterval);  // 설정된 setInterval 중지
+        startControlButton.disabled = false;  // 제어 시작 버튼 활성화
+        stopControlButton.disabled = true;  // 제어 중지 버튼 비활성화
+
+        const recordButton = document.getElementById('recordButton');
+        recordButton.disabled = false;  // 녹음 버튼 다시 활성화
+
+        isAutoControlActive = false;  // 자동 제어 플래그 리셋
+    });
+
+        
+
+    
 });
