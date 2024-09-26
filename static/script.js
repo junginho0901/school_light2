@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let consecutiveSchoolSounds = 0;
     let classDistributionChart, hourlyDetectionChart, signalAdjustmentChart;
     let updateInterval;
+    let confidencesLog = []; // 예측 결과 저장용 배열
 
     const socket = io();
 
@@ -145,15 +146,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function stopRecording() {
-        if (audioContext) {
-            audioContext.close();
+        if (audioContext && audioContext.state !== 'closed') {  // audioContext가 있고, 이미 닫힌 상태가 아니라면
+            audioContext.close().then(() => {
+                console.log('AudioContext가 정상적으로 종료되었습니다.');
+            }).catch((error) => {
+                console.error('AudioContext 종료 중 오류 발생:', error);
+            });
         }
         isRecording = false;
         audioBuffer = [];
         recordButton.textContent = '녹음 시작';
         recordButton.style.backgroundColor = '#4CAF50';
     }
-
+    
     function sendAudioToBackend(audioData) {
         const wavBuffer = createWavFile(audioData);
         const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
@@ -170,6 +175,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
             resultElement.textContent = `${elapsedTime}초: 예측된 클래스: ${data.class}, 신뢰도: ${(data.confidence * 100).toFixed(2)}%`;
             resultsDiv.insertBefore(resultElement, resultsDiv.firstChild);
+
+            confidencesLog.push({ class: data.class, confidence: data.confidence });
+
 
             if (data.class === '등하원소리' && isRedLight) {
                 consecutiveSchoolSounds++;
@@ -587,7 +595,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let timePeriodCount = 1;
     let isAutoControlActive = false;
-
     const addTimeButton = document.getElementById('addTimeButton');
     const startControlButton = document.getElementById('startControl');
     const stopControlButton = document.getElementById('stopControl');
@@ -650,12 +657,56 @@ document.addEventListener('DOMContentLoaded', function() {
             alert("자동 제어가 이미 활성화되어 있습니다.");
             return;
         }
-
+    
+        const recordingDuration = parseFloat(document.getElementById('recordDuration').value) || 5; // 분 단위
+        const durationInMilliseconds = recordingDuration * 60 * 1000;  // 밀리초로 변환
+    
+        // 제어 버튼 상태 업데이트
+        startControlButton.disabled = true;
+        stopControlButton.disabled = false;
+        recordButton.disabled = true;  // 녹음 버튼 비활성화
+    
+        isAutoControlActive = true;
+    
+        // 첫 자동 제어 시 즉시 녹음 실행
+        startRecording();
+        console.log(`${recordingDuration}분 동안 첫 자동 녹음 시작`);
+    
+        // 설정된 시간 후 녹음 중지
+        setTimeout(function() {
+            stopRecording();
+            console.log("첫 자동 녹음 종료");
+    
+            // 비율 계산 (필요 시 바로 중지)
+            checkSchoolSoundRatio(confidencesLog);
+        }, durationInMilliseconds);
+    
+        // 1시간마다 자동으로 녹음 반복 실행
+        autoControlInterval = setInterval(function() {
+            confidencesLog = [];  // 1시간마다 녹음 시작 전에 배열 초기화
+            startRecording();  // 1시간마다 녹음 시작
+            console.log(`${recordingDuration}분 동안 자동 녹음 시작`);
+    
+            // 설정된 시간 후 녹음 중지
+            setTimeout(function() {
+                stopRecording();
+                console.log("자동 녹음 종료");
+    
+                // 녹음 결과 판단 및 비율 계산
+                checkSchoolSoundRatio(confidencesLog);
+            }, durationInMilliseconds);
+    
+        }, 3600000); // 1시간마다 실행
+    
+        // 제어 버튼 상태 업데이트
+        startControlButton.disabled = true;
+        stopControlButton.disabled = false;
+        recordButton.disabled = true;  // 녹음 버튼 비활성화
         // 자동 제어나 수동 제어를 활성화
+
         startControlButton.disabled = true;
         stopControlButton.disabled = false;
         
-        const recordButton = document.getElementById('recordButton');
         recordButton.disabled = true;  // 녹음 버튼 비활성화
 
         // 클릭 이벤트를 막는 코드 추가
@@ -687,16 +738,56 @@ document.addEventListener('DOMContentLoaded', function() {
     // 제어 중지 버튼 클릭 시
     stopControlButton.addEventListener('click', function() {
         clearInterval(controlInterval);  // 설정된 setInterval 중지
-        startControlButton.disabled = false;  // 제어 시작 버튼 활성화
-        stopControlButton.disabled = true;  // 제어 중지 버튼 비활성화
-
-        const recordButton = document.getElementById('recordButton');
-        recordButton.disabled = false;  // 녹음 버튼 다시 활성화
-
+        clearInterval(autoControlInterval);  // 자동 제어 중지
+    
+        // 제어 및 녹음 버튼 상태 초기화
+        startControlButton.disabled = false;
+        stopControlButton.disabled = true;
+        recordButton.disabled = false;
+    
         isAutoControlActive = false;  // 자동 제어 플래그 리셋
+    
+        // 녹음 중이었을 경우 녹음 중지
+        stopRecording();
     });
 
-        
+    function checkSchoolSoundRatio(confidencesLog) {
+        let schoolSoundCount = confidencesLog.filter(conf => conf.class === '등하원소리').length;
+        let totalCount = confidencesLog.length;
+    
+        if (totalCount === 0) {
+            console.log("로그 데이터가 없습니다.");
+            return;
+        }
+    
+        let ratio = (schoolSoundCount / totalCount) * 100;  // 비율 계산
+    
+        console.log(`등하원소리 비율: ${ratio}%`);
+    
+        if (ratio >= 80) {  // 80% 이상의 경우 자동으로 제어 중지 및 녹음 시작
+            console.log("등하원 소리 비율이 80% 이상임 - 제어 중지 및 녹음 종료");
+            
+            // 자동 제어 중지
+            clearInterval(autoControlInterval);  // 자동 제어 중지
+            clearInterval(controlInterval);  // 시간대 비교 중지
+    
+            isAutoControlActive = false;  // 자동 제어 플래그 리셋
+            stopRecording();  // 현재 녹음 종료
+            
+            // 제어 중지 후 상태 업데이트
+            stopControlButton.click();  // 제어 중지 버튼 강제 클릭
+            recordButton.disabled = false;  // 녹음 버튼 활성화
+            
+            console.log("자동 제어 중지 및 녹음 버튼 활성화");
+    
+            // 비율이 충족되면 녹음 시작
+            setTimeout(function() {
+                console.log("등하원 소리 비율이 80% 이상으로 녹음 재시작");
+                startRecording();  // 녹음 재시작
+            }, 1000);  // 1초 후 녹음 재시작
+        }
+    }
+    
 
     
 });

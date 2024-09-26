@@ -48,7 +48,10 @@
                 <!-- 시간대 추가 버튼 -->
                 <button id="addTimeButton" class="btn">시간대 추가</button>
             
-                <!-- 제어 버튼 -->
+                <label for="recordDuration">녹음 시간 (분):</label>
+                <input type="number" id="recordDuration" name="recordDuration" value="5" min="1" max="60">
+                
+                <!-- 제어 버튼들 -->
                 <button id="startControl" class="btn btn-success">제어 시작</button>
                 <button id="stopControl" class="btn btn-danger" disabled>제어 중지</button>
             </div>

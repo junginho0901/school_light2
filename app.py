@@ -1,7 +1,7 @@
 import os
 import io
 import csv
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from collections import defaultdict
 import tempfile
 import zipfile
@@ -196,7 +196,9 @@ logging.basicConfig(level=logging.INFO)
 @app.route('/predict', methods=['POST'])
 def predict():
     global signal_adjustments
+    record_duration = request.form.get('recordDuration', default=5, type=int)  # 기본 5분
     
+    print(f"사용자 설정 녹음 시간: {record_duration}분")
     # 1. 오디오 파일이 요청에 포함되어 있는지 확인
     if 'audio' not in request.files:
         logging.error("오디오 파일이 포함되지 않았습니다.")
@@ -583,6 +585,53 @@ def create_plot(data, forecast, title):
     graphic = graphic.decode('utf-8')
     
     return graphic
+
+
+import threading
+def check_school_sound_ratio(data):
+    global school_sound_ratio
+
+    # data에서 등하원 소리 비율을 계산하는 로직 추가
+    total_predictions = len(data)
+    school_sound_count = sum(1 for d in data if d['class'] == '등하원소리')
+
+    school_sound_ratio = (school_sound_count / total_predictions) * 100
+    logging.info(f"등하원 소리 비율: {school_sound_ratio}%")
+
+    # 일정 비율 이상일 경우 제어 중지 및 녹음 시작
+    if school_sound_ratio >= 80:  # 임의의 기준, 설정에 따라 변경 가능
+        stop_control()  # 제어 중지
+        logging.info("등하원 소리 비율 초과로 인해 제어 중지")
+
+
+def automatic_recording():
+    while is_control_active:  # 제어가 중지될 때까지
+        # 1시간에 1번씩 녹음을 수행하고 판단하는 로직 추가
+        time.sleep(3600)  # 1시간 대기 (임의로 설정 가능)
+
+        # 녹음 트리거: predict 함수 호출 로직
+        with app.test_request_context('/predict', method='POST'):
+            # 임의의 오디오 파일을 predict에 전달하는 코드를 추가해야 합니다.
+            response = predict()
+            data = response.get_json()
+            
+            # 판단 결과에서 등하원 소리 비율 확인
+            check_school_sound_ratio(data)
+
+        # 판단 결과에 따라 제어 중지
+        if is_control_active and school_sound_ratio >= threshold_ratio:
+            stop_control()  # 제어 중지 함수 호출
+
+def stop_control():
+    global is_control_active
+    is_control_active = False  # 제어 비활성화
+    # 여기서 추가적으로 필요한 제어 중지 로직을 넣을 수 있습니다.
+    logging.info("제어가 중지되었습니다.")
+
+# 초기화 시
+# 임계값 비율을 설정 (예: 80%)
+threshold_ratio = 80  # 등하원 소리 비율이 80% 이상일 때 제어 중지
+is_control_active = False  # 제어가 비활성화된 상태로 시작
 
 if __name__ == '__main__':
     load_predictions_from_csv()
