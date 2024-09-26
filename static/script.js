@@ -657,6 +657,24 @@ document.addEventListener('DOMContentLoaded', function() {
             alert("자동 제어가 이미 활성화되어 있습니다.");
             return;
         }
+
+        let invalidTimeRange = false;
+    for (let i = 1; i <= timePeriodCount; i++) {
+        const startTime = document.getElementById(`startTime${i}`).value;
+        const endTime = document.getElementById(`endTime${i}`).value;
+
+        if (startTime >= endTime) {
+            invalidTimeRange = true;
+            break;
+        }
+    }
+
+    // 시간대가 유효하지 않으면 경고 메시지를 띄우고 제어 시작 중지
+    if (invalidTimeRange) {
+        alert("시간 범위가 잘못되었습니다. 시작 시간은 종료 시간보다 이전이어야 합니다.");
+        return;
+    }
+
     
         const recordingDuration = parseFloat(document.getElementById('recordDuration').value) || 5; // 분 단위
         const durationInMilliseconds = recordingDuration * 60 * 1000;  // 밀리초로 변환
