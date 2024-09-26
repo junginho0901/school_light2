@@ -754,39 +754,39 @@ document.addEventListener('DOMContentLoaded', function() {
     function checkSchoolSoundRatio(confidencesLog) {
         let schoolSoundCount = confidencesLog.filter(conf => conf.class === '등하원소리').length;
         let totalCount = confidencesLog.length;
-    
-        if (totalCount === 0) {
-            console.log("로그 데이터가 없습니다.");
-            return;
-        }
-    
+        
         let ratio = (schoolSoundCount / totalCount) * 100;  // 비율 계산
-    
         console.log(`등하원소리 비율: ${ratio}%`);
     
-        if (ratio >= 80) {  // 80% 이상의 경우 자동으로 제어 중지 및 녹음 시작
+        // 현재 시간을 가져와서 사용자가 설정한 시간대에 있는지 확인
+        const currentTime = new Date();
+        const currentHourMinute = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}`;
+        
+        let isInUserTimePeriod = false;
+        for (let i = 1; i <= timePeriodCount; i++) {
+            const startTime = document.getElementById(`startTime${i}`).value;
+            const endTime = document.getElementById(`endTime${i}`).value;
+    
+            if (currentHourMinute >= startTime && currentHourMinute <= endTime) {
+                isInUserTimePeriod = true;  // 현재 시간이 사용자가 설정한 시간대 안에 있음을 표시
+                break;
+            }
+        }
+    
+        if (!isInUserTimePeriod && ratio >= 80) {  // 사용자가 설정한 시간대 밖에 있고 비율이 80% 이상일 때
             console.log("등하원 소리 비율이 80% 이상임 - 제어 중지 및 녹음 종료");
-            
-            // 자동 제어 중지
             clearInterval(autoControlInterval);  // 자동 제어 중지
             clearInterval(controlInterval);  // 시간대 비교 중지
-    
-            isAutoControlActive = false;  // 자동 제어 플래그 리셋
-            stopRecording();  // 현재 녹음 종료
-            
-            // 제어 중지 후 상태 업데이트
             stopControlButton.click();  // 제어 중지 버튼 강제 클릭
             recordButton.disabled = false;  // 녹음 버튼 활성화
-            
-            console.log("자동 제어 중지 및 녹음 버튼 활성화");
     
-            // 비율이 충족되면 녹음 시작
-            setTimeout(function() {
-                console.log("등하원 소리 비율이 80% 이상으로 녹음 재시작");
-                startRecording();  // 녹음 재시작
-            }, 1000);  // 1초 후 녹음 재시작
+            stopRecording();  // 현재 녹음 종료
+            console.log("비율 80% 이상 - 자동 제어 중지 및 녹음 종료");
+        } else if (isInUserTimePeriod) {
+            console.log("현재 설정된 시간대 안에 있음 - 자동 제어 유지");
         }
     }
+    
     
 
     
