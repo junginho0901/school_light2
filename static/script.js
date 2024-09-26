@@ -615,7 +615,8 @@ document.addEventListener('DOMContentLoaded', function() {
             <input type="time" id="endTime${timePeriodCount}" name="endTime">
             <button class="remove-time-btn">삭제</button>
         `;
-        
+        timePeriodsDiv.appendChild(newTimePeriod);
+
         // 삭제 버튼 이벤트 리스너 추가
         const removeButton = newTimePeriod.querySelector('.remove-time-btn');
         removeButton.addEventListener('click', function() {
@@ -629,9 +630,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 timePeriodCount--;
             }
         });
-
+    
         // 새 시간대 입력창 추가
-        timePeriodsDiv.appendChild(newTimePeriod);
     });
     
         // 첫 번째 삭제 버튼에 대한 초기화 로직도 추가
@@ -649,8 +649,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     
-
-    // 제어 시작 버튼 클릭 시 신호등 초록불 시간을 10초씩 추가
     // 제어 시작 버튼 클릭 시 신호등 초록불 시간을 10초씩 추가
     startControlButton.addEventListener('click', function() {
         if (isAutoControlActive) {

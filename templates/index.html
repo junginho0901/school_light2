@@ -33,12 +33,14 @@
             <div class="control-panel">
                 <button id="recordButton">녹음 시작</button>
                 <div class="time-period-container">
-                    <div class="time-period">
-                        <label for="startTime1">시작 시간:</label>
-                        <input type="time" id="startTime1" name="startTime">
-                        <label for="endTime1">종료 시간:</label>
-                        <input type="time" id="endTime1" name="endTime">
-                        <button class="remove-time-btn">삭제</button>
+                    <div id="timePeriodsDiv"> <!-- timePeriodsDiv 추가 -->
+                        <div class="time-period">
+                            <label for="startTime1">시작 시간:</label>
+                            <input type="time" id="startTime1" name="startTime">
+                            <label for="endTime1">종료 시간:</label>
+                            <input type="time" id="endTime1" name="endTime">
+                            <button class="remove-time-btn">삭제</button>
+                        </div>
                     </div>
                 
                     <button id="addTimeButton" class="btn">시간대 추가</button>
@@ -61,8 +63,8 @@
         </main>
     </div>
 
-    <div id="dashboardModal" class="modal">
-        <div class="modal-content">
+    <div id="dashboardModal" class="modal_dash">
+        <div class="modal-content_dash">
             <span class="close">&times;</span>
             <h2>소리 분석 대시보드</h2>
             <div class="charts-container">

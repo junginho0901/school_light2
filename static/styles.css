@@ -102,7 +102,8 @@ button:hover {
     font-size: 14px;
 }
 
-.modal-content {
+
+.modal-content_dash {
     background-color: #ffffff; /* 흰색 배경 */
     color: #333333; /* 어두운 텍스트 색상 */
     margin: 15% auto;
@@ -113,7 +114,7 @@ button:hover {
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
-.modal {
+.modal_dash {
     display: none; /* 기본적으로 숨김 */
     position: fixed;
     z-index: 1000;
@@ -303,4 +304,52 @@ button:disabled {
 .control-buttons button {
     width: 45%;
     padding: 10px;
+}
+/* 이미지 크기 조정 */
+img {
+    max-width: 1200px;     /* 가로 크기를 1200px로 증가 */
+    max-height: 1200px;    /* 세로 크기를 1200px로 증가 */
+    cursor: pointer;
+    object-fit: contain;   /* 이미지를 왜곡하지 않도록 비율을 유지 */
+    transition: transform 0.3s ease;
+}
+
+img:hover {
+    transform: scale(1.2); /* 이미지 확대 효과 */
+}
+
+/* 모달 안 이미지 스타일링 */
+.modal-content {
+    width: 100%;            /* 너비를 100%로 설정 */
+    max-width: 1500px;       /* 최대 너비를 1500px로 증가 */
+    height: auto;            /* 세로 길이를 자동으로 조절 */
+    max-height: 90vh;        /* 최대 세로 높이를 화면의 90%로 설정 */
+    object-fit: contain;     /* 비율을 유지하며 이미지 크기 조정 */
+    border-radius: 10px;
+}
+
+/* 모달 스타일링 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;          /* 모달 너비 전체 */
+    height: 100%;         /* 모달 높이 전체 */
+    background-color: rgba(0, 0, 0, 0.9);  /* 배경 어둡게 */
+    display: flex;
+    justify-content: center;
+    align-items: center;  /* 중앙 정렬 */
+}
+
+
+/* 닫기 버튼 스타일 */
+.close {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    font-size: 35px;
+    color: #ffffff;
+    cursor: pointer;
 }

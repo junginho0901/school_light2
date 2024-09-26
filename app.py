@@ -165,22 +165,15 @@ def save_high_confidence_data(audio_data, sr, spectrogram, predicted_class, conf
         # 오디오 파일 저장
         sf.write(audio_path, audio_data, sr)
 
-        # 스펙트로그램 생성 및 저장
-        fig, ax = plt.subplots(figsize=(10, 4))
-        img = librosa.display.specshow(spectrogram, sr=sr, x_axis='time', y_axis='mel', ax=ax)
-        plt.colorbar(img, format='%+2.0f dB')
-        plt.title(f'{predicted_class} (신뢰도: {confidence:.2f})')
+        # 스펙트로그램을 이미지로 변환 (모델 입력 방식 사용)
+        img = Image.fromarray((spectrogram * 255).astype(np.uint8)).convert('RGB')
+        img = img.resize((224, 224))  # 필요시 크기 조정
+        img.save(spectrogram_path)  # 이미지를 저장
 
-        # 렌더러 초기화 및 스펙트로그램 저장
-        fig.canvas.draw()  # RendererAgg 초기화
-        plt.tight_layout()
-        plt.savefig(spectrogram_path)
-
-        logging.info("고신뢰 데이터가 성공적으로 저장되었습니다.")
+        logging.info(f"고신뢰 데이터가 성공적으로 저장되었습니다. {spectrogram_path}")
     except Exception as e:
         logging.error(f"고신뢰 데이터 저장 중 오류 발생: {e}")
-    finally:
-        plt.close(fig)  # figure를 닫아 메모리 누수를 방지
+
 
 
 

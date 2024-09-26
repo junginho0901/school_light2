@@ -193,7 +193,7 @@
 
     <div id="imageModal" class="modal">
         <span class="close">&times;</span>
-        <img class="modal-content" id="modalImage">
+        <img class="modal-content" id="modalImage" style="width: auto; height: auto;">
         <div id="caption"></div>
     </div>
 
@@ -231,23 +231,25 @@
                 order: [[4, 'desc']]  // 저장된 시점을 기준으로 내림차순 정렬
             });
 
-            // 이미지 모달
             var modal = document.getElementById("imageModal");
             var modalImg = document.getElementById("modalImage");
             var span = document.getElementsByClassName("close")[0];
 
             $('#data-table').on('click', '.spectrogram-image', function() {
-                modal.style.display = "block";
+                modal.style.display = "flex"; // 중앙에 맞추기 위해 flex 설정
                 modalImg.src = this.src;
+
+                // 부드러운 확대 애니메이션
+                $(modalImg).hide().fadeIn(300); 
             });
 
             span.onclick = function() {
-                modal.style.display = "none";
+                $(modal).fadeOut(300); // 부드럽게 모달을 닫기
             }
 
             window.onclick = function(event) {
                 if (event.target == modal) {
-                    modal.style.display = "none";
+                    $(modal).fadeOut(300); // 모달 밖을 클릭해도 부드럽게 닫기
                 }
             }
 
