@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     if (typeof io === 'undefined') {
         console.error('Socket.IO 클라이언트 라이브러리를 찾을 수 없습니다.');
     }
@@ -35,12 +35,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const notificationDiv = document.getElementById('notificationDiv');
 
-    socket.on('notification', function(data) {
+    socket.on('notification', function (data) {
         showNotification(data.message);
     });
 
     var modal = document.getElementById("imageModal");
-    
+
     function hideDashboard() {
         dashboardModal.style.display = "none";
         if (updateInterval) {
@@ -48,23 +48,23 @@ document.addEventListener('DOMContentLoaded', function() {
             updateInterval = null;
         }
     }
-    
-    
+
+
     var modalImg = document.getElementById("modalImage");
     var captionText = document.getElementById("caption");
     var span = document.getElementsByClassName("close")[0];
 
-    $('#data-table').on('click', '.spectrogram-image', function() {
+    $('#data-table').on('click', '.spectrogram-image', function () {
         modal.style.display = "block";
         modalImg.src = this.src;
         captionText.innerHTML = this.alt;
     });
 
-    span.onclick = function() {
+    span.onclick = function () {
         modal.style.display = "none";
     }
 
-    window.onclick = function(event) {
+    window.onclick = function (event) {
         if (event.target == modal) {
             modal.style.display = "none";
         }
@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (closeButton) closeButton.addEventListener('click', hideDashboard);
     if (resetButton) resetButton.addEventListener('click', resetData);
 
-    window.onclick = function(event) {
+    window.onclick = function (event) {
         if (event.target == dashboardModal) {
             hideDashboard();
         }
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const table = document.getElementById('data-table');
     if (table) {
-        table.addEventListener('click', function(e) {
+        table.addEventListener('click', function (e) {
             if (e.target.classList.contains('download-btn')) {
                 e.preventDefault();
                 const fileName = e.target.getAttribute('data-filename');
@@ -99,9 +99,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const notificationElement = document.createElement('div');
         notificationElement.className = 'notification';
         notificationElement.textContent = message;
-        
+
         notificationDiv.appendChild(notificationElement);
-        
+
         setTimeout(() => {
             notificationDiv.removeChild(notificationElement);
         }, 5000);
@@ -115,24 +115,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     // 입력 시 0.1분 이하 또는 60분 이상 입력 못하도록 제한
-// 입력 시 0.1분 이하 또는 60분 이상 입력 못하도록 제한 (입력 종료 후에 제한)
-const recordDurationInput = document.getElementById('recordDuration');
+    // 입력 시 0.1분 이하 또는 60분 이상 입력 못하도록 제한 (입력 종료 후에 제한)
+    const recordDurationInput = document.getElementById('recordDuration');
 
-// 사용자가 입력을 끝냈을 때 값 검사
-recordDurationInput.addEventListener('change', function() {
-    let value = parseFloat(this.value);
+    // 사용자가 입력을 끝냈을 때 값 검사
+    recordDurationInput.addEventListener('change', function () {
+        let value = parseFloat(this.value);
 
-    if (value < 0.1 || isNaN(value)) {
-        this.value = 0.1;  // 0.1분 이하로 설정하지 못하도록
-    } else if (value > 60) {
-        this.value = 60;  // 60분 이상 설정하지 못하도록
-    }
-});
+        if (value < 0.1 || isNaN(value)) {
+            this.value = 0.1;  // 0.1분 이하로 설정하지 못하도록
+        } else if (value > 60) {
+            this.value = 60;  // 60분 이상 설정하지 못하도록
+        }
+    });
 
-// 마우스 스크롤로 값 조정 방지
-recordDurationInput.addEventListener('wheel', function(event) {
-    event.preventDefault();
-}, { passive: true });
+    // 마우스 스크롤로 값 조정 방지
+    recordDurationInput.addEventListener('wheel', function (event) {
+        event.preventDefault();
+    }, { passive: true });
 
 
     async function startRecording() {
@@ -182,7 +182,7 @@ recordDurationInput.addEventListener('wheel', function(event) {
         recordButton.style.borderRadius = '5px';  // 모서리 둥글게 설정
 
     }
-    
+
     function sendAudioToBackend(audioData) {
         const wavBuffer = createWavFile(audioData);
         const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
@@ -193,29 +193,29 @@ recordDurationInput.addEventListener('wheel', function(event) {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
-        .then(data => {
-            const resultElement = document.createElement('p');
-            const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
-            resultElement.textContent = `${elapsedTime}초: 예측된 클래스: ${data.class}, 신뢰도: ${(data.confidence * 100).toFixed(2)}%`;
-            resultsDiv.insertBefore(resultElement, resultsDiv.firstChild);
+            .then(response => response.json())
+            .then(data => {
+                const resultElement = document.createElement('p');
+                const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
+                resultElement.textContent = `${elapsedTime}초: 예측된 클래스: ${data.class}, 신뢰도: ${(data.confidence * 100).toFixed(2)}%`;
+                resultsDiv.insertBefore(resultElement, resultsDiv.firstChild);
 
-            confidencesLog.push({ class: data.class, confidence: data.confidence });
+                confidencesLog.push({ class: data.class, confidence: data.confidence });
 
 
-            if (data.class === '등하원소리' && isRedLight) {
-                consecutiveSchoolSounds++;
-                if (consecutiveSchoolSounds >= 5 && !isExtendedGreenScheduled) {
-                    isExtendedGreenScheduled = true;
-                    console.log("다음 초록불 10초 연장 예약됨");
+                if (data.class === '등하원소리' && isRedLight) {
+                    consecutiveSchoolSounds++;
+                    if (consecutiveSchoolSounds >= 5 && !isExtendedGreenScheduled) {
+                        isExtendedGreenScheduled = true;
+                        console.log("다음 초록불 10초 연장 예약됨");
+                    }
+                } else if (isRedLight) {
+                    consecutiveSchoolSounds = 0;
                 }
-            } else if (isRedLight) {
-                consecutiveSchoolSounds = 0;
-            }
-        })
-        .catch(error => {
-            console.error('오디오 전송 중 오류 발생:', error);
-        });
+            })
+            .catch(error => {
+                console.error('오디오 전송 중 오류 발생:', error);
+            });
     }
 
     function createWavFile(audioData) {
@@ -256,7 +256,7 @@ recordDurationInput.addEventListener('wheel', function(event) {
         // 모든 불을 비활성화
         lights.forEach(light => light.classList.remove('active'));
         lights[currentLight].classList.add('active');
-    
+
         // 타이머가 0이 되었을 때
         if (timeLeft === 0) {
             currentLight = (currentLight + 1) % 2; // 빨간불 <-> 초록불 전환
@@ -279,26 +279,26 @@ recordDurationInput.addEventListener('wheel', function(event) {
                 }
             }
         }
-    
+
         // 남은 시간을 화면에 표시
         timer.textContent = timeLeft;
         timeLeft--;
-    
+
         // 1초 후 다시 실행
         setTimeout(updateTrafficLight, 1000);
     }
-    
-    
+
+
     function showDashboard() {
         dashboardModal.style.display = "block";
         initCharts();  // 차트 초기화
         updateCharts();  // 초기 데이터 업데이트
-    
+
         if (!updateInterval) {  // 중복 실행 방지
             updateInterval = setInterval(updateCharts, 5000);  // 5초마다 차트 업데이트
         }
     }
-    
+
 
     function hideDashboard() {
         dashboardModal.style.display = "none";
@@ -340,7 +340,7 @@ recordDurationInput.addEventListener('wheel', function(event) {
                         },
                         tooltip: {
                             callbacks: {
-                                label: function(tooltipItem) {
+                                label: function (tooltipItem) {
                                     let label = tooltipItem.label || '';
                                     return `${label}: ${tooltipItem.raw}`;
                                 }
@@ -356,7 +356,7 @@ recordDurationInput.addEventListener('wheel', function(event) {
                 }
             });
         }
-    
+
         if (!hourlyDetectionChart) {
             hourlyDetectionChart = new Chart(document.getElementById('hourlyDetectionChart'), {
                 type: 'line',
@@ -397,7 +397,7 @@ recordDurationInput.addEventListener('wheel', function(event) {
                 }
             });
         }
-    
+
         if (!signalAdjustmentChart) {
             signalAdjustmentChart = new Chart(document.getElementById('signalAdjustmentChart'), {
                 type: 'line',
@@ -446,19 +446,19 @@ recordDurationInput.addEventListener('wheel', function(event) {
             });
         }
     }
-    
+
     function updateCharts() {
         if (!classDistributionChart || !hourlyDetectionChart || !signalAdjustmentChart) {
             console.warn("Charts are not initialized.");
             return;  // 차트가 초기화되지 않았으면 함수 종료
         }
-    
+
         console.log("Updating charts...");
         fetch('/stats')
             .then(response => response.json())
             .then(data => {
                 console.log("Received data:", data);
-    
+
                 if (data && data.class_counts && data.hourly_data && data.hourly_signal_data) {
                     updateClassDistributionChart(data.class_counts);
                     updateHourlyDetectionChart(data.hourly_data);
@@ -469,32 +469,32 @@ recordDurationInput.addEventListener('wheel', function(event) {
             })
             .catch(error => console.error('Error fetching stats:', error));
     }
-    
-    
-    
-    
-    
+
+
+
+
+
     function updateClassDistributionChart(classCounts) {
         if (!classDistributionChart) {
             console.error("classDistributionChart is not initialized.");
             return;  // 차트가 초기화되지 않았으면 함수 종료
         }
-    
+
         if (!classCounts || Object.keys(classCounts).length === 0) {
             console.warn("classCounts is undefined or empty.");
             return;  // 데이터가 없으면 함수 종료
         }
-    
+
         const labels = Object.keys(classCounts);
         const data = Object.values(classCounts);
-    
+
         classDistributionChart.data.labels = labels;
         classDistributionChart.data.datasets[0].data = data;
         classDistributionChart.update();
     }
-    
-    
-    
+
+
+
 
     function updateHourlyDetectionChart(hourlyData) {
         const reversedData = hourlyData.reverse();
@@ -553,7 +553,7 @@ recordDurationInput.addEventListener('wheel', function(event) {
 
     function downloadFiles(fileName, className) {
         const downloadUrl = `/download-file/${encodeURIComponent(className)}/${encodeURIComponent(fileName)}`;
-        
+
         fetch(downloadUrl)
             .then(response => {
                 if (!response.ok) {
@@ -628,7 +628,7 @@ recordDurationInput.addEventListener('wheel', function(event) {
 
 
     // 시간대 추가 버튼 이벤트
-    addTimeButton.addEventListener('click', function() {
+    addTimeButton.addEventListener('click', function () {
         timePeriodCount++;
         const newTimePeriod = document.createElement('div');
         newTimePeriod.classList.add('time-period');
@@ -643,7 +643,7 @@ recordDurationInput.addEventListener('wheel', function(event) {
 
         // 삭제 버튼 이벤트 리스너 추가
         const removeButton = newTimePeriod.querySelector('.remove-time-btn');
-        removeButton.addEventListener('click', function() {
+        removeButton.addEventListener('click', function () {
             if (timePeriodCount === 1) {
                 // 하나만 남았을 경우 값 초기화
                 document.getElementById('startTime1').value = '';
@@ -654,152 +654,152 @@ recordDurationInput.addEventListener('wheel', function(event) {
                 timePeriodCount--;
             }
         });
-    
+
         // 새 시간대 입력창 추가
     });
-    
-        // 첫 번째 삭제 버튼에 대한 초기화 로직도 추가
-        const initialRemoveButton = document.querySelector('.remove-time-btn');
-        initialRemoveButton.addEventListener('click', function() {
-            if (timePeriodCount === 1) {
-                // 하나만 남았을 경우 값 초기화
-                document.getElementById('startTime1').value = '';
-                document.getElementById('endTime1').value = '';
-            } else {
-                // 입력 창 삭제
-                const timePeriod = this.parentElement;
-                timePeriodsDiv.removeChild(timePeriod);
-                timePeriodCount--;
-            }
-        });
-    
-// 제어 시작 버튼 클릭 시 신호등 초록불 시간을 10초씩 추가
-startControlButton.addEventListener('click', function() {
-    if (isAutoControlActive) {
-        alert("자동 제어가 이미 활성화되어 있습니다.");
-        return;
-    }
 
-    let invalidTimeRange = false;
-    for (let i = 1; i <= timePeriodCount; i++) {
-        const startTime = document.getElementById(`startTime${i}`).value;
-        const endTime = document.getElementById(`endTime${i}`).value;
-
-        if (startTime >= endTime) {
-            invalidTimeRange = true;
-            break;
-        }
-    }
-
-    // 시간대가 유효하지 않으면 경고 메시지를 띄우고 제어 시작 중지
-    if (invalidTimeRange) {
-        alert("시간 범위가 잘못되었습니다. 시작 시간은 종료 시간보다 이전이어야 합니다.");
-        return;
-    }
-
-    const recordingDuration = parseFloat(document.getElementById('recordDuration').value) || 5; // 분 단위
-    const durationInMilliseconds = recordingDuration * 60 * 1000;  // 밀리초로 변환
-
-    // 제어 버튼 상태 업데이트
-    startControlButton.disabled = true;
-    stopControlButton.disabled = false;
-    recordButton.disabled = true;  // 녹음 버튼 비활성화
-
-    isAutoControlActive = true;
-
-    // 첫 자동 제어 시 즉시 녹음 실행
-    startRecording();
-    console.log(`${recordingDuration}분 동안 첫 자동 녹음 시작`);
-
-    // 설정된 시간 후 녹음 중지
-    setTimeout(function() {
-        stopRecording();
-        console.log("첫 자동 녹음 종료");
-
-        // 비율 계산 (필요 시 바로 중지)
-        checkSchoolSoundRatio(confidencesLog);
-    }, durationInMilliseconds);
-
-    // 1시간마다 자동으로 녹음 반복 실행
-    autoControlInterval = setInterval(function() {
-        confidencesLog = [];  // 1시간마다 녹음 시작 전에 배열 초기화
-        startRecording();  // 1시간마다 녹음 시작
-        console.log(`${recordingDuration}분 동안 자동 녹음 시작`);
-
-        // 설정된 시간 후 녹음 중지
-        setTimeout(function() {
-            stopRecording();
-            console.log("자동 녹음 종료");
-
-            // 녹음 결과 판단 및 비율 계산
-            checkSchoolSoundRatio(confidencesLog);
-        }, durationInMilliseconds);
-
-    }, 3600000); // 1시간마다 실행
-
-    // 제어 버튼 상태 업데이트
-    startControlButton.disabled = true;
-    stopControlButton.disabled = false;
-    recordButton.disabled = true;  // 녹음 버튼 비활성화
-    // 자동 제어나 수동 제어를 활성화
-
-    startControlButton.disabled = true;
-    stopControlButton.disabled = false;
-
-    recordButton.disabled = true;  // 녹음 버튼 비활성화
-
-    // 클릭 이벤트를 막는 코드 추가
-    recordButton.addEventListener('click', function(event) {
-        if (recordButton.disabled) {
-            event.preventDefault();  // 클릭 방지
-            return;  // 클릭 이벤트 실행되지 않도록
+    // 첫 번째 삭제 버튼에 대한 초기화 로직도 추가
+    const initialRemoveButton = document.querySelector('.remove-time-btn');
+    initialRemoveButton.addEventListener('click', function () {
+        if (timePeriodCount === 1) {
+            // 하나만 남았을 경우 값 초기화
+            document.getElementById('startTime1').value = '';
+            document.getElementById('endTime1').value = '';
+        } else {
+            // 입력 창 삭제
+            const timePeriod = this.parentElement;
+            timePeriodsDiv.removeChild(timePeriod);
+            timePeriodCount--;
         }
     });
 
-    isAutoControlActive = true;
+    // 제어 시작 버튼 클릭 시 신호등 초록불 시간을 10초씩 추가
+    startControlButton.addEventListener('click', function () {
+        if (isAutoControlActive) {
+            alert("자동 제어가 이미 활성화되어 있습니다.");
+            return;
+        }
 
-    controlInterval = setInterval(function() {
-        const currentTime = new Date();
-        const currentHourMinute = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}`;
-        const currentWeekday = currentTime.getDay();  // 현재 요일 (0 = 일요일, 6 = 토요일)
-
-        // 디버깅을 위해 현재 요일과 비활성화된 요일 출력
-        console.log("현재 요일: ", currentWeekday);
-        console.log("비활성화된 요일들: ", disabledWeekdays);
-
+        let invalidTimeRange = false;
         for (let i = 1; i <= timePeriodCount; i++) {
             const startTime = document.getElementById(`startTime${i}`).value;
             const endTime = document.getElementById(`endTime${i}`).value;
 
-            // 사용자가 선택한 요일이 비활성화된 요일에 포함되어 있는지 확인
-            if (!disabledWeekdays.includes(currentWeekday)) {
-                // 요일이 활성화된 상태일 때만 시간 추가
-                if (startTime && endTime && currentHourMinute >= startTime && currentHourMinute <= endTime) {
-                    console.log("자동 제어 활성화 - 10초 추가");
-                    isExtendedGreenScheduled = true;
-                }
-            } else {
-                console.log("오늘은 설정된 요일로 자동 제어가 비활성화됨");
+            if (startTime >= endTime) {
+                invalidTimeRange = true;
+                break;
             }
         }
-    }, 1000); // 1초마다 현재 시간과 비교
-});
+
+        // 시간대가 유효하지 않으면 경고 메시지를 띄우고 제어 시작 중지
+        if (invalidTimeRange) {
+            alert("시간 범위가 잘못되었습니다. 시작 시간은 종료 시간보다 이전이어야 합니다.");
+            return;
+        }
+
+        const recordingDuration = parseFloat(document.getElementById('recordDuration').value) || 5; // 분 단위
+        const durationInMilliseconds = recordingDuration * 60 * 1000;  // 밀리초로 변환
+
+        // 제어 버튼 상태 업데이트
+        startControlButton.disabled = true;
+        stopControlButton.disabled = false;
+        recordButton.disabled = true;  // 녹음 버튼 비활성화
+
+        isAutoControlActive = true;
+
+        // 첫 자동 제어 시 즉시 녹음 실행
+        startRecording();
+        console.log(`${recordingDuration}분 동안 첫 자동 녹음 시작`);
+
+        // 설정된 시간 후 녹음 중지
+        setTimeout(function () {
+            stopRecording();
+            console.log("첫 자동 녹음 종료");
+
+            // 비율 계산 (필요 시 바로 중지)
+            checkSchoolSoundRatio(confidencesLog);
+        }, durationInMilliseconds);
+
+        // 1시간마다 자동으로 녹음 반복 실행
+        autoControlInterval = setInterval(function () {
+            confidencesLog = [];  // 1시간마다 녹음 시작 전에 배열 초기화
+            startRecording();  // 1시간마다 녹음 시작
+            console.log(`${recordingDuration}분 동안 자동 녹음 시작`);
+
+            // 설정된 시간 후 녹음 중지
+            setTimeout(function () {
+                stopRecording();
+                console.log("자동 녹음 종료");
+
+                // 녹음 결과 판단 및 비율 계산
+                checkSchoolSoundRatio(confidencesLog);
+            }, durationInMilliseconds);
+
+        }, 3600000); // 1시간마다 실행
+
+        // 제어 버튼 상태 업데이트
+        startControlButton.disabled = true;
+        stopControlButton.disabled = false;
+        recordButton.disabled = true;  // 녹음 버튼 비활성화
+        // 자동 제어나 수동 제어를 활성화
+
+        startControlButton.disabled = true;
+        stopControlButton.disabled = false;
+
+        recordButton.disabled = true;  // 녹음 버튼 비활성화
+
+        // 클릭 이벤트를 막는 코드 추가
+        recordButton.addEventListener('click', function (event) {
+            if (recordButton.disabled) {
+                event.preventDefault();  // 클릭 방지
+                return;  // 클릭 이벤트 실행되지 않도록
+            }
+        });
+
+        isAutoControlActive = true;
+
+        controlInterval = setInterval(function () {
+            const currentTime = new Date();
+            const currentHourMinute = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}`;
+            const currentWeekday = currentTime.getDay();  // 현재 요일 (0 = 일요일, 6 = 토요일)
+
+            // 디버깅을 위해 현재 요일과 비활성화된 요일 출력
+            console.log("현재 요일: ", currentWeekday);
+            console.log("비활성화된 요일들: ", disabledWeekdays);
+
+            for (let i = 1; i <= timePeriodCount; i++) {
+                const startTime = document.getElementById(`startTime${i}`).value;
+                const endTime = document.getElementById(`endTime${i}`).value;
+
+                // 사용자가 선택한 요일이 비활성화된 요일에 포함되어 있는지 확인
+                if (!disabledWeekdays.includes(currentWeekday)) {
+                    // 요일이 활성화된 상태일 때만 시간 추가
+                    if (startTime && endTime && currentHourMinute >= startTime && currentHourMinute <= endTime) {
+                        console.log("자동 제어 활성화 - 10초 추가");
+                        isExtendedGreenScheduled = true;
+                    }
+                } else {
+                    console.log("오늘은 설정된 요일로 자동 제어가 비활성화됨");
+                }
+            }
+        }, 1000); // 1초마다 현재 시간과 비교
+    });
 
 
 
-    
+
     // 제어 중지 버튼 클릭 시
-    stopControlButton.addEventListener('click', function() {
+    stopControlButton.addEventListener('click', function () {
         clearInterval(controlInterval);  // 설정된 setInterval 중지
         clearInterval(autoControlInterval);  // 자동 제어 중지
-    
+
         // 제어 및 녹음 버튼 상태 초기화
         startControlButton.disabled = false;
         stopControlButton.disabled = true;
         recordButton.disabled = false;
-    
+
         isAutoControlActive = false;  // 자동 제어 플래그 리셋
-    
+
         // 녹음 중이었을 경우 녹음 중지
         stopRecording();
     });
@@ -807,10 +807,10 @@ startControlButton.addEventListener('click', function() {
     function checkSchoolSoundRatio(confidencesLog) {
         let schoolSoundCount = confidencesLog.filter(conf => conf.class === '등하원소리').length;
         let totalCount = confidencesLog.length;
-        
+
         let ratio = (schoolSoundCount / totalCount) * 100;  // 비율 계산
         console.log(`등하원소리 비율: ${ratio}%`);
-    
+
         // 현재 시간을 가져와서 사용자가 설정한 시간대에 있는지 확인
         const currentTime = new Date();
         const currentHourMinute = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}`;
@@ -819,67 +819,67 @@ startControlButton.addEventListener('click', function() {
         for (let i = 1; i <= timePeriodCount; i++) {
             const startTime = document.getElementById(`startTime${i}`).value;
             const endTime = document.getElementById(`endTime${i}`).value;
-    
+
             if (currentHourMinute >= startTime && currentHourMinute <= endTime) {
                 isInUserTimePeriod = true;  // 현재 시간이 사용자가 설정한 시간대 안에 있음을 표시
                 break;
             }
         }
-    
-            // 현재 요일이 비활성화된 요일인지 확인
-    if (disabledWeekdays.includes(currentWeekday)) {
-        // 비활성화된 요일에 소리 비율이 80% 이상이면 자동 제어 중지하고 녹음 시작
-        if (ratio >= 80) {
-            console.log("비활성화된 요일이면서 등하원 소리 비율이 80% 이상 - 자동 제어 중지 및 녹음 시작");
-            clearInterval(autoControlInterval);  // 자동 제어 중지
-            clearInterval(controlInterval);  // 시간대 비교 중지
-            stopControlButton.click();  // 제어 중지 버튼 강제 클릭
-            recordButton.disabled = false;  // 녹음 버튼 활성화
-            stopRecording();  // 현재 녹음 종료
-            
-            console.log("비율 80% 이상 - 자동 제어 중지 및 녹음 종료");
-            
-            // 자동 제어는 중지하지만, 1초마다 계속해서 녹음과 판단 반복
-            startRecording();  // 녹음 다시 시작
-            console.log("자동 제어 중지 후, 녹음 다시 시작");
-        } else {
-            console.log("비활성화된 요일이지만 비율 80% 미만 - 자동 제어 유지");
-        }
-    } else if (isInUserTimePeriod) {
-        // 사용자가 설정한 시간대 안에 있을 때는 자동 제어를 유지
-        console.log("현재 설정된 시간대 안에 있음 - 자동 제어 유지");
-    } else {
-        // 사용자가 설정한 시간대 밖에 있고 비율이 80% 이상일 때만 제어를 중지
-        if (ratio >= 80) {
-            console.log("등하원 소리 비율이 80% 이상임 - 제어 중지 및 녹음 종료");
-            clearInterval(autoControlInterval);  // 자동 제어 중지
-            clearInterval(controlInterval);  // 시간대 비교 중지
-            stopControlButton.click();  // 제어 중지 버튼 강제 클릭
-            recordButton.disabled = false;  // 녹음 버튼 활성화
 
-            stopRecording();  // 현재 녹음 종료
-            console.log("비율 80% 이상 - 자동 제어 중지 및 녹음 종료");
+        // 현재 요일이 비활성화된 요일인지 확인
+        if (disabledWeekdays.includes(currentWeekday)) {
+            // 비활성화된 요일에 소리 비율이 80% 이상이면 자동 제어 중지하고 녹음 시작
+            if (ratio >= 80) {
+                console.log("비활성화된 요일이면서 등하원 소리 비율이 80% 이상 - 자동 제어 중지 및 녹음 시작");
+                clearInterval(autoControlInterval);  // 자동 제어 중지
+                clearInterval(controlInterval);  // 시간대 비교 중지
+                stopControlButton.click();  // 제어 중지 버튼 강제 클릭
+                recordButton.disabled = false;  // 녹음 버튼 활성화
+                stopRecording();  // 현재 녹음 종료
 
-            // 자동 제어 중지 후에도 녹음 및 판단 계속 반복
-            startRecording();  // 다시 녹음 시작
+                console.log("비율 80% 이상 - 자동 제어 중지 및 녹음 종료");
+
+                // 자동 제어는 중지하지만, 1초마다 계속해서 녹음과 판단 반복
+                startRecording();  // 녹음 다시 시작
+                console.log("자동 제어 중지 후, 녹음 다시 시작");
+            } else {
+                console.log("비활성화된 요일이지만 비율 80% 미만 - 자동 제어 유지");
+            }
+        } else if (isInUserTimePeriod) {
+            // 사용자가 설정한 시간대 안에 있을 때는 자동 제어를 유지
+            console.log("현재 설정된 시간대 안에 있음 - 자동 제어 유지");
         } else {
-            console.log("설정된 시간대 밖에 있지만 비율이 80% 미만 - 자동 제어 유지");
+            // 사용자가 설정한 시간대 밖에 있고 비율이 80% 이상일 때만 제어를 중지
+            if (ratio >= 80) {
+                console.log("등하원 소리 비율이 80% 이상임 - 제어 중지 및 녹음 종료");
+                clearInterval(autoControlInterval);  // 자동 제어 중지
+                clearInterval(controlInterval);  // 시간대 비교 중지
+                stopControlButton.click();  // 제어 중지 버튼 강제 클릭
+                recordButton.disabled = false;  // 녹음 버튼 활성화
+
+                stopRecording();  // 현재 녹음 종료
+                console.log("비율 80% 이상 - 자동 제어 중지 및 녹음 종료");
+
+                // 자동 제어 중지 후에도 녹음 및 판단 계속 반복
+                startRecording();  // 다시 녹음 시작
+            } else {
+                console.log("설정된 시간대 밖에 있지만 비율이 80% 미만 - 자동 제어 유지");
+            }
         }
     }
-    }
-    
-    
-    
+
+
+
     let disabledWeekdays = [];  // 자동 제어가 비활성화될 요일들을 저장할 배열
 
     // 요일 버튼 클릭 시 요일을 토글로 비활성화 설정
-    document.querySelectorAll('.weekday-btn').forEach(function(button) {
-        button.addEventListener('click', function() {
+    document.querySelectorAll('.weekday-btn').forEach(function (button) {
+        button.addEventListener('click', function () {
             const weekday = parseInt(this.dataset.weekday);
-    
+
             // 디버깅: 현재 클릭한 요일 출력
             console.log("클릭한 요일 (0=일요일, 6=토요일): ", weekday);
-    
+
             // 해당 요일이 이미 비활성화된 상태면 배열에서 제거
             if (disabledWeekdays.includes(weekday)) {
                 disabledWeekdays = disabledWeekdays.filter(day => day !== weekday);
@@ -890,13 +890,13 @@ startControlButton.addEventListener('click', function() {
                 this.classList.add('disabled');  // 버튼 스타일 업데이트
                 console.log("요일 비활성화: ", weekday);
             }
-    
+
             // 디버깅: 비활성화된 요일들 출력
             console.log("비활성화된 요일들: ", disabledWeekdays);
         });
     });
-    
 
 
-    
+
+
 });

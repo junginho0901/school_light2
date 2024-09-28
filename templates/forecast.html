@@ -1,18 +1,50 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>등하원 소리 예측</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        .container {
+            width: 300px;
+            min-height: 100px;
+            margin: auto;
+            transition: all 0.3s ease;
+        }
+
+        /* 결과가 나오면 확장된 상태 */
+        .container.expanded {
+            width: 100vw;
+            /* 화면 전체 가로 크기 */
+            min-height: auto;
+            /* 자동으로 내용을 모두 포함 */
+            min-height: 250vh;
+            /* 화면 전체 세로 */
+
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .no-bullets {
+            list-style: none;
+            /* 불릿 제거 */
+            padding-left: 0;
+            /* 기본적으로 제공되는 왼쪽 여백 제거 */
+        }
+    </style>
 </head>
+
 <body>
-    <div class="container">
+    <div class="container" id="mainContainer">
         <header>
-            <h1>등하원 소리 예측</h1>
+            <h1>등하교 시간 분석 및 예측</h1>
             <nav>
-                <a href="{{ url_for('index') }}" class="nav-button">메인 페이지로 돌아가기</a>
+                <a href="{{ url_for('index') }}" class="nav-button">← 메인 페이지로 돌아가기</a>
             </nav>
         </header>
         <main>
@@ -22,49 +54,129 @@
                 <div id="dayForecast"></div>
                 <div id="weekForecast"></div>
                 <h2>시간별 분석 결과(평균)</h2>
-                <ul id="hourlyAnalysis"></ul>
+                <div class="analysis-container">
+                    <ul class="no-bullets" id="hourlyAnalysis"></ul>
+                    <canvas id="hourlyChart" width="400" height="300"></canvas>
+                </div>
+
                 <h2>요일별 분석 결과(평균)</h2>
-                <ul id="weekdayAnalysis"></ul>
+                <div class="analysis-container">
+                    <ul class="no-bullets" id="weekdayAnalysis"></ul>
+                    <canvas id="weekdayChart" width="400" height="300"></canvas> <!-- 다른 ID 사용 -->
+                </div>
+
+
+
             </div>
         </main>
     </div>
 
     <script>
         $(document).ready(function() {
-            $('#runForecast').click(function() {
-                $('#loadingMessage').show();
-                $('#forecastResults').hide();
-                $.ajax({
-                    url: '/run_forecast',
-                    method: 'POST',
-                    success: function(response) {
-                        // 예측 결과 이미지 출력
-                        $('#dayForecast').html('<img src="data:image/png;base64,' + response.day_forecast + '" />');
-                        $('#weekForecast').html('<img src="data:image/png;base64,' + response.week_forecast + '" />');
+    $('#runForecast').click(function() {
+        $('#loadingMessage').show();
+        $('#forecastResults').hide();
 
-                        // 시간별 분석 결과 출력
-                        $('#hourlyAnalysis').empty();
-                        $.each(response.hourly_analysis, function(hour, count) {
-                            $('#hourlyAnalysis').append('<li>' + hour + '시: ' + count + '개</li>');
-                        });
+        $.ajax({
+            url: '/run_forecast',
+            method: 'POST',
+            success: function(response) {
+                // 예측 결과 이미지 출력
+                $('#dayForecast').html('<img src="data:image/png;base64,' + response.day_forecast + '" />');
+                $('#weekForecast').html('<img src="data:image/png;base64,' + response.week_forecast + '" />');
 
-                        // 요일별 분석 결과 출력
-                        const weekdays = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
-                        $('#weekdayAnalysis').empty();
-                        $.each(response.weekday_analysis, function(weekday, count) {
-                            $('#weekdayAnalysis').append('<li>' + weekdays[weekday] + ': ' + count + '개</li>');
-                        });
-
-                        $('#loadingMessage').hide();
-                        $('#forecastResults').show();
-                    },
-                    error: function() {
-                        alert('예측 실행 중 오류가 발생했습니다.');
-                        $('#loadingMessage').hide();
-                    }
+                // 시간별 분석 결과 출력
+                $('#hourlyAnalysis').empty();
+                var hourlyLabels = [];
+                var hourlyData = [];
+                $.each(response.hourly_analysis, function(hour, count) {
+                    $('#hourlyAnalysis').append('<li>' + hour + '시: ' + count + '개</li>');
+                    hourlyLabels.push(hour + '시');
+                    hourlyData.push(count);
                 });
-            });
+
+                // 요일별 분석 결과 출력
+                const weekdays = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
+                $('#weekdayAnalysis').empty();
+                var weekdayLabels = [];
+                var weekdayData = [];
+                $.each(response.weekday_analysis, function(weekday, count) {
+                    $('#weekdayAnalysis').append('<li>' + weekdays[weekday] + ': ' + count + '개</li>');
+                    weekdayLabels.push(weekdays[weekday]);
+                    weekdayData.push(count);
+                });
+
+                $('#loadingMessage').hide();
+                $('#forecastResults').show();
+
+                // 결과가 나왔을 때 컨테이너 크기 확장
+                $('.container').addClass('expanded');
+
+                // 시간별 분석 차트 생성
+// 시간별 분석 차트 생성
+// 시간별 분석 차트 생성
+var ctxHourly = document.getElementById('hourlyChart').getContext('2d');
+new Chart(ctxHourly, {
+    type: 'bar',
+    data: {
+        labels: hourlyLabels,
+        datasets: [{
+            label: '시간별 평균 소리 횟수',
+            data: hourlyData,
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        maintainAspectRatio: false, /* 비율을 유지하지 않음 */
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// 요일별 분석 차트 생성
+var ctxWeekday = document.getElementById('weekdayChart').getContext('2d');
+new Chart(ctxWeekday, {
+    type: 'bar',
+    data: {
+        labels: weekdayLabels,
+        datasets: [{
+            label: '요일별 평균 소리 횟수',
+            data: weekdayData,
+            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        maintainAspectRatio: false, /* 비율을 유지하지 않음 */
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+
+
+                $('#loadingMessage').hide();
+                $('#forecastResults').show();
+            },
+            error: function() {
+                alert('예측 실행 중 오류가 발생했습니다.');
+                $('#loadingMessage').hide();
+            }
         });
+    });
+});
+
+
     </script>
 </body>
+
 </html>

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,58 +17,80 @@
             padding: 20px;
             background-color: #f4f4f4;
         }
+
         .container {
-            max-width: 1200px;
+            position: relative;
+            /* 컨테이너를 기준으로 위치를 고정할 수 있게 만듦 */
+
+            max-width: 1800px;
             margin: auto;
             background: white;
             padding: 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
+
         h1 {
             color: #333;
             text-align: center;
         }
+
         nav {
             text-align: center;
             margin-bottom: 20px;
         }
+
         nav a {
             margin: 0 10px;
             text-decoration: none;
             color: #333;
             font-weight: bold;
         }
+
         table {
+            table-layout: auto;
+            /* 자동 레이아웃을 적용하여 셀이 콘텐츠에 맞게 조정되도록 함 */
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
-        th, td {
-            padding: 12px;
-            text-align: left;
+
+        td {
+            text-align: center;
+            /* 좌우 가운데 정렬 */
+            vertical-align: middle;
+            /* 필요하면 세로 가운데 정렬도 추가 가능 */
+        }
+
+        th,
+        td {
+
+            padding: 5px;
+            text-align: center;
             border-bottom: 1px solid #ddd;
         }
+
         th {
             background-color: #f2f2f2;
             font-weight: bold;
         }
+
         tr:hover {
             background-color: #f5f5f5;
         }
-        audio {
-            width: 300px; /* 오디오 바의 너비를 늘림 */
-            margin-right: 20px; /* 이미지와 간격을 줌 */
-        }
-
-        td img {
-            margin-left: 10px; /* 오디오 바와 이미지 사이에 간격 추가 */
-        }
 
         img {
-            max-width: 100px;
-            max-height: 100px;
+            max-width: 110px;
+            max-height: 110px;
             cursor: pointer;
         }
+
+        .spectrogram-image {
+            max-width: 100px;
+            max-height: 100px;
+            margin-left: 10px;
+            /* Adds spacing between the audio player and the image */
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -77,14 +100,16 @@
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0,0,0,0.9);
+            background-color: rgba(0, 0, 0, 0.9);
         }
+
         .modal-content {
             margin: auto;
             display: block;
             width: 80%;
             max-width: 700px;
         }
+
         .close {
             position: absolute;
             top: 15px;
@@ -94,12 +119,14 @@
             font-weight: bold;
             transition: 0.3s;
         }
+
         .close:hover,
         .close:focus {
             color: #bbb;
             text-decoration: none;
             cursor: pointer;
         }
+
         .btn {
             display: inline-block;
             padding: 10px 20px;
@@ -110,35 +137,231 @@
             border-radius: 5px;
             margin-top: 10px;
         }
+
+        /* 전체 폴더 다운로드 버튼 */
+        .full-download-btn {
+            display: block;
+            /* 블록 요소로 설정하여 너비가 전체로 적용 */
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto 10px;
+            /* 중앙 정렬과 아래 마진 추가 */
+        }
+
+        /* 버튼 그룹(드롭다운과 클래스 다운로드 버튼) */
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            /* 버튼 사이에 간격 분배 */
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            /* 부모 요소 기준으로 가운데 정렬 */
+        }
+
+        /* 버튼과 드롭다운의 크기 조정 */
+        .button-group select,
+        .button-group button {
+            flex: 1;
+            /* 버튼과 드롭다운이 같은 비율로 공간 차지 */
+            margin-right: 10px;
+            /* 버튼과 드롭다운 사이의 간격 */
+        }
+
+        .button-group button:last-child {
+            margin-right: 0;
+            /* 마지막 버튼의 오른쪽 마진 제거 */
+        }
+
+
+        .play-pause:hover,
+        .volume-button:hover {
+            color: inherit;
+            /* hover 시 색이 변하지 않도록 원래 색상 유지 */
+            background: none;
+            /* 배경 색도 변하지 않도록 함 */
+            cursor: pointer;
+            /* 마우스 커서는 여전히 포인터로 유지 */
+        }
+
         .btn-primary {
             background-color: #007bff;
             color: white;
         }
+
         .btn-success {
             background-color: #28a745;
             color: white;
         }
+
         .btn-secondary {
             background-color: #6c757d;
             color: white;
         }
+
         .dropdown {
             margin-bottom: 20px;
         }
+
+        .audio-player {
+            border: 1px solid #ccc;
+            /* 회색 테두리 적용 */
+            border-radius: 5px;
+            /* 테두리 모서리 둥글게 */
+            padding: 5px;
+            /* 테두리와 내용 간 여백 추가 */
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            /* 모든 요소를 왼쪽에 맞춰서 배치 */
+            gap: 3px;
+            /* 각 요소 간의 간격 최소화 */
+            width: auto;
+            /* 오디오 플레이어 너비 자동 조정 */
+        }
+
+        .play-pause {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 20px;
+            height: 20px;
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: #5f6368;
+            margin-right: 5px;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .time {
+            font-size: 12px;
+            margin: 0 3px;
+            /* 시간 텍스트의 좌우 간격 줄이기 */
+            padding: 0;
+            min-width: 30px;
+            /* 시간 텍스트의 최소 너비 줄이기 */
+        }
+
+        .seek-bar {
+            flex-grow: 1;
+            height: 5px;
+            margin: 0 3px;
+            /* 시크바 양 옆 간격 최소화 */
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            /* 볼륨 버튼과 슬라이더 사이 간격 최소화 */
+            margin: 0;
+            padding: 0;
+        }
+
+        .volume-button {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 20px;
+            height: 20px;
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: #5f6368;
+            margin: 0 0px;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .volume-slider {
+            width: 70px;
+            /* 볼륨 슬라이더 크기 조정 */
+            height: 5px;
+            padding: 0;
+            margin: 0;
+        }
+
+        .download-btn {
+            display: inline-block;
+            /* 버튼을 인라인 블록으로 설정 */
+            justify-content: center;
+            align-items: center;
+            width: 20px;
+            height: 20px;
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: #5f6368;
+            margin: 0 auto;
+            /* 좌우 중앙 정렬 */
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .download-btn img {
+            width: 100%;
+            /* 이미지가 버튼 안에 맞도록 */
+            height: auto;
+            /* 이미지 비율 유지 */
+        }
+
+        .back-button-container {
+            position: absolute;
+            /* 컨테이너 내부에서 절대 위치 */
+            top: 10px;
+            /* 컨테이너 상단에서 10px 떨어짐 */
+            left: 10px;
+            /* 컨테이너 왼쪽에서 10px 떨어짐 */
+        }
+
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            /* 파란색 배경 */
+            color: white;
+            /* 흰색 텍스트 */
+            text-decoration: none;
+            /* 링크 밑줄 제거 */
+            border-radius: 5px;
+            /* 모서리를 둥글게 */
+            font-size: 16px;
+            /* 글자 크기 */
+            font-weight: bold;
+            /* 글자 굵게 */
+            transition: background-color 0.3s ease;
+            /* 호버 시 부드러운 전환 효과 */
+        }
+
+        .back-button:hover {
+            background-color: #0056b3;
+            /* 호버 시 더 어두운 파란색 */
+        }
+
+        .back-button::before {
+
+            /* 버튼 앞에 화살표 추가 */
+            font-size: 18px;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>고신뢰도 데이터 관리</h1>
-        <nav>
-            <a href="{{ url_for('index') }}" class="nav-button">메인 페이지로 돌아가기</a>
+        <nav class="back-button-container">
+            <a href="{{ url_for('index') }}" class="back-button">← 메인 페이지로 돌아가기</a>
         </nav>
-        
+
+
         <!-- 전체 폴더 다운로드 버튼 -->
-        <button onclick="downloadAllFolder()" class="btn btn-success">전체 폴더 다운로드</button>
-        
-        <!-- 클래스 선택 드롭다운과 클래스 다운로드 버튼 -->
-        <div class="dropdown">
+        <button onclick="downloadAllFolder()" class="btn btn-success full-download-btn">전체 폴더 다운로드</button>
+
+        <!-- 드롭다운과 선택한 클래스 폴더 다운로드 버튼 -->
+        <div class="dropdown button-group">
             <select id="classDropdown" class="btn btn-secondary">
                 <option value="기차">기차</option>
                 <option value="등하원소리">등하원소리</option>
@@ -154,12 +377,13 @@
             <button id="downloadClassFolder" class="btn btn-secondary">선택한 클래스 폴더 다운로드</button>
         </div>
 
+
         <table id="data-table">
             <thead>
                 <tr>
-                    <th>번호</th>
+                    <th>num</th>
                     <th>파일명</th>
-                    <th>분류된 클래스</th>
+                    <th>클래스</th>
                     <th>정확도</th>
                     <th>저장된 시점</th>
                     <th>오디오</th>
@@ -176,10 +400,16 @@
                     <td>{{ item.confidence | round(2) }}%</td>
                     <td>{{ item.timestamp }}</td>
                     <td>
-                        <audio controls>
-                            <source src="{{ item.audio_path }}" type="audio/wav">
-                            Your browser does not support the audio element.
-                        </audio>
+                        <div class="audio-player" data-audio-src="{{ item.audio_path }}">
+                            <button class="play-pause">▶</button>
+                            <span class="time current-time">0:00</span>
+                            <input type="range" class="seek-bar" value="0" min="0" max="100">
+                            <span class="time duration">0:00</span>
+                            <div class="volume-container">
+                                <button class="volume-button">🔊</button>
+                                <input type="range" class="volume-slider" min="0" max="100" value="100">
+                            </div>
+                        </div>
                     </td>
                     <td>
                         {% if item.spectrogram_path %}
@@ -189,12 +419,13 @@
                         {% endif %}
                     </td>
                     <td>
-                        <button class="download-btn" data-filename="{{ item.file_name }}" data-class="{{ item.class }}">다운로드</button>
+                        <button class="download-btn" data-filename="{{ item.file_name }}"
+                            data-class="{{ item.class }}">⬇️</button>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
-        </table>        
+        </table>
     </div>
 
     <div id="imageModal" class="modal">
@@ -204,69 +435,87 @@
     </div>
 
     <script>
-        $(document).ready(function() {
+        $(document).ready(function () {
+
             var table = $('#data-table').DataTable({
                 ajax: {
                     url: '/get-data-list',
                     dataSrc: ''
                 },
                 columns: [
-                    { data: null, render: function (data, type, row, meta) {
-                        return meta.row + 1;
-                    }},
+                    {
+                        data: null, render: function (data, type, row, meta) {
+                            return meta.row + 1;
+                        }
+                    },
                     { data: 'file_name' },
                     { data: 'class' },
-                    { data: 'confidence', render: function(data, type, row) {
-                        return (data * 100).toFixed(2) + '%';
-                    }},
-                    { data: 'timestamp' },
-                    { data: 'audio_path', render: function(data, type, row) {
-                        return '<audio controls><source src="' + data + '" type="audio/wav">Your browser does not support the audio element.</audio>';
-                    }},
-                    { data: 'spectrogram_path', render: function(data, type, row) {
-                        if (data) {
-                            return '<img src="' + data + '" alt="Spectrogram" class="spectrogram-image">';
-                        } else {
-                            return 'N/A';
+                    {
+                        data: 'confidence', render: function (data, type, row) {
+                            return (data * 100).toFixed(2) + '%';
                         }
-                    }},
-                    { data: null, render: function(data, type, row) {
-                        return '<button class="download-btn" data-filename="' + row.file_name + '" data-class="' + row.class + '">다운로드</button>';
-                    }}
+                    },
+                    { data: 'timestamp' },
+                    {
+                        data: 'audio_path', render: function (data, type, row) {
+                            return '<div class="audio-player" data-audio-src="' + data + '">' +
+                                '<button class="play-pause">▶</button>' +
+                                '<span class="time">0:00</span>' +
+                                '<input type="range" class="seek-bar" value="0" min="0" max="100">' +
+                                '<span class="time">0:00</span>' +
+                                '<div class="volume-container">' +
+                                '<button class="volume-button">🔊</button>' +
+                                '<input type="range" class="volume-slider" min="0" max="100" value="100">' +
+                                '</div></div>';
+                        }
+                    },
+                    {
+                        data: 'spectrogram_path', render: function (data, type, row) {
+                            if (data) {
+                                return '<img src="' + data + '" alt="Spectrogram" class="spectrogram-image">';
+                            } else {
+                                return 'N/A';
+                            }
+                        }
+                    },
+                    {
+                        data: null, render: function (data, type, row) {
+                            return '<button class="download-btn" data-filename="' + row.file_name + '" data-class="' + row.class + '">⬇️</button>';
+                        }
+                    }
                 ],
-                order: [[4, 'desc']]  // 저장된 시점을 기준으로 내림차순 정렬
+                order: [[4, 'desc']],
+                drawCallback: function () {
+                    initializeAudioPlayers();
+                }
             });
 
             var modal = document.getElementById("imageModal");
             var modalImg = document.getElementById("modalImage");
             var span = document.getElementsByClassName("close")[0];
 
-            $('#data-table').on('click', '.spectrogram-image', function() {
-                modal.style.display = "flex"; // 중앙에 맞추기 위해 flex 설정
+            $('#data-table').on('click', '.spectrogram-image', function () {
+                modal.style.display = "flex";
                 modalImg.src = this.src;
-
-                // 부드러운 확대 애니메이션
-                $(modalImg).hide().fadeIn(300); 
+                $(modalImg).hide().fadeIn(300);
             });
 
-            span.onclick = function() {
-                $(modal).fadeOut(300); // 부드럽게 모달을 닫기
+            span.onclick = function () {
+                $(modal).fadeOut(300);
             }
 
-            window.onclick = function(event) {
+            window.onclick = function (event) {
                 if (event.target == modal) {
-                    $(modal).fadeOut(300); // 모달 밖을 클릭해도 부드럽게 닫기
+                    $(modal).fadeOut(300);
                 }
             }
 
-            // 클래스 폴더 다운로드 버튼 클릭 시 선택된 클래스 다운로드
-            $('#downloadClassFolder').on('click', function() {
+            $('#downloadClassFolder').on('click', function () {
                 var selectedClass = $('#classDropdown').val();
                 window.location.href = '/download-folder/' + encodeURIComponent(selectedClass);
             });
 
-            // 다운로드 버튼 클릭 이벤트 처리
-            $('#data-table').on('click', '.download-btn', function() {
+            $('#data-table').on('click', '.download-btn', function () {
                 var fileName = $(this).data('filename');
                 var className = $(this).data('class');
                 downloadFiles(fileName, className);
@@ -275,7 +524,7 @@
 
         function downloadFiles(fileName, className) {
             const downloadUrl = `/download-file/${encodeURIComponent(className)}/${encodeURIComponent(fileName)}`;
-            
+
             fetch(downloadUrl)
                 .then(response => {
                     if (!response.ok) {
@@ -302,6 +551,91 @@
         function downloadAllFolder() {
             window.location.href = '/download-folder/high_confidence_data';
         }
+
+        function initializeAudioPlayers() {
+            const players = document.querySelectorAll('.audio-player');
+
+            players.forEach(player => {
+                const audio = new Audio(player.dataset.audioSrc);
+                const playPauseButton = player.querySelector('.play-pause');
+                const seekBar = player.querySelector('.seek-bar');
+                const volumeButton = player.querySelector('.volume-button');
+                const volumeSlider = player.querySelector('.volume-slider');
+                const timeDisplays = player.querySelectorAll('.time');
+
+                // 초기화 시 모든 seek-bar를 0으로 설정
+                seekBar.value = 0;
+
+                // 초기화 시 모든 volume-slider를 100으로 설정
+                volumeSlider.value = 100;
+                audio.volume = 1;
+
+                let isPlaying = false;
+
+                function togglePlay() {
+                    if (isPlaying) {
+                        audio.pause();
+                        playPauseButton.textContent = '▶';
+                    } else {
+                        audio.play();
+                        playPauseButton.textContent = '❚❚';
+                    }
+                    isPlaying = !isPlaying;
+                }
+
+                function updateSeekBar() {
+                    const percent = (audio.currentTime / audio.duration) * 100;
+                    seekBar.value = percent;
+                    timeDisplays[0].textContent = formatTime(audio.currentTime);
+                }
+
+                function formatTime(time) {
+                    const minutes = Math.floor(time / 60);
+                    const seconds = Math.floor(time % 60).toString().padStart(2, '0');
+                    return `${minutes}:${seconds}`;
+                }
+
+                playPauseButton.addEventListener('click', togglePlay);
+
+                audio.addEventListener('loadedmetadata', () => {
+                    timeDisplays[1].textContent = formatTime(audio.duration);
+                });
+
+                audio.addEventListener('timeupdate', updateSeekBar);
+
+                seekBar.addEventListener('input', () => {
+                    const time = (seekBar.value / 100) * audio.duration;
+                    audio.currentTime = time;
+                });
+
+                volumeButton.addEventListener('click', () => {
+                    audio.muted = !audio.muted;
+                    volumeButton.textContent = audio.muted ? '🔇' : '🔊';
+                    volumeSlider.value = audio.muted ? 0 : audio.volume * 100;
+                });
+
+                volumeSlider.addEventListener('input', () => {
+                    audio.volume = volumeSlider.value / 100;
+                    audio.muted = false;
+                    volumeButton.textContent = volumeSlider.value == 0 ? '🔇' : '🔊';
+                });
+
+                // Volume slider show/hide functionalit
+                volumeButton.addEventListener('click', () => {
+                    audio.muted = !audio.muted;
+                    volumeButton.textContent = audio.muted ? '🔇' : '🔊';
+                    volumeSlider.value = audio.muted ? 0 : audio.volume * 100;
+                });
+
+                volumeSlider.addEventListener('input', () => {
+                    audio.volume = volumeSlider.value / 100;
+                    audio.muted = false;
+                    volumeButton.textContent = volumeSlider.value == 0 ? '🔇' : '🔊';
+                });
+
+            });
+        }
     </script>
 </body>
+
 </html>

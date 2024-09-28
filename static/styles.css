@@ -243,7 +243,6 @@ button:hover {
     cursor: not-allowed;
 }
 
-
 .nav-button:hover {
     background-color: #007bff;  /* 마우스를 올리면 파란색으로 변환 */
 }
@@ -332,9 +331,7 @@ img {
     transition: transform 0.3s ease;
 }
 
-img:hover {
-    transform: scale(1.2); /* 이미지 확대 효과 */
-}
+
 
 /* 모달 안 이미지 스타일링 */
 .modal-content {
@@ -373,7 +370,6 @@ img:hover {
 }
 #forecastResults {
     max-height: 400px; /* 적절한 높이를 지정하세요 */
-    overflow-y: auto; /* 세로 스크롤 활성화 */
     padding: 10px;
 }
 img {
@@ -404,3 +400,25 @@ img {
 .download-btn:hover {
     background-color: #007bff;  /* 마우스를 올리면 파란색으로 변환 */
 }
+.analysis-container {
+    display: flex;
+    align-items: center; /* 수직 정렬 */
+    justify-content: center; /* 수평 정렬 (가운데로 배치) */
+    gap: 20px; /* 텍스트와 차트 사이 간격 */
+    width: 100%; /* 전체 너비 사용 */
+}
+
+ul.no-bullets {
+    width: 30%; /* 텍스트가 차지할 너비 */
+    margin: 0;
+    padding: 0;
+    text-align: left; /* 리스트 텍스트는 왼쪽 정렬 */
+}
+
+canvas {
+    width: 600px;  /* 고정된 너비 */
+    height: 400px; /* 고정된 높이 */
+    max-width: 600px;  /* 최대 너비 */
+    max-height: 400px; /* 최대 높이 */
+}
+
