@@ -137,8 +137,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             isRecording = true;
             startTime = Date.now();
-            recordButton.textContent = '녹음 중지';
+            recordButton.textContent = '실시간 판단 중지';
             recordButton.style.backgroundColor = '#ff4136';
+            recordButton.style.borderRadius = '5px';  // 모서리 둥글게 설정
+
         } catch (error) {
             console.error('녹음 시작 중 오류 발생:', error);
             alert('마이크 접근 권한이 필요합니다.');
@@ -155,8 +157,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         isRecording = false;
         audioBuffer = [];
-        recordButton.textContent = '녹음 시작';
+        recordButton.textContent = '실시간 판단 시작';
         recordButton.style.backgroundColor = '#4CAF50';
+        recordButton.style.borderRadius = '5px';  // 모서리 둥글게 설정
+
     }
     
     function sendAudioToBackend(audioData) {

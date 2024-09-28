@@ -19,7 +19,7 @@
             <nav>
                 <a href="{{ url_for('data_management') }}" class="nav-button">데이터 관리</a>
                 <button id="dashboardButton" class="nav-button">대시보드 보기</button>
-                <a href="{{ url_for('forecast_page') }}" class="nav-button">등하원 소리 예측</a>
+                <a href="{{ url_for('forecast_page') }}" class="nav-button">ARIMA 예측</a>
             </nav>
         </header>
         <main>
@@ -49,6 +49,7 @@
                         <label for="recordDuration">자동 제어 1시간 주시 녹음 시간 설정 (분):</label>
                         <input type="number" id="recordDuration" value="5">
                     </div>
+                    <label for="weekdaylabel">자동 제어 중지 날짜:</label>
                     <div id="weekdayButtons">
                         <button class="weekday-btn" data-weekday="1">월</button>
                         <button class="weekday-btn" data-weekday="2">화</button>
