@@ -18,9 +18,13 @@
         <main>
             <button id="runForecast" class="btn btn-primary">예측 실행</button>
             <div id="loadingMessage" style="display: none;">예측 중... 잠시만 기다려주세요.</div>
-            <div id="forecastResults">
+            <div id="forecastResults" style="display: none;">
                 <div id="dayForecast"></div>
                 <div id="weekForecast"></div>
+                <h2>시간별 분석 결과(평균)</h2>
+                <ul id="hourlyAnalysis"></ul>
+                <h2>요일별 분석 결과(평균)</h2>
+                <ul id="weekdayAnalysis"></ul>
             </div>
         </main>
     </div>
@@ -34,8 +38,23 @@
                     url: '/run_forecast',
                     method: 'POST',
                     success: function(response) {
+                        // 예측 결과 이미지 출력
                         $('#dayForecast').html('<img src="data:image/png;base64,' + response.day_forecast + '" />');
                         $('#weekForecast').html('<img src="data:image/png;base64,' + response.week_forecast + '" />');
+
+                        // 시간별 분석 결과 출력
+                        $('#hourlyAnalysis').empty();
+                        $.each(response.hourly_analysis, function(hour, count) {
+                            $('#hourlyAnalysis').append('<li>' + hour + '시: ' + count + '개</li>');
+                        });
+
+                        // 요일별 분석 결과 출력
+                        const weekdays = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
+                        $('#weekdayAnalysis').empty();
+                        $.each(response.weekday_analysis, function(weekday, count) {
+                            $('#weekdayAnalysis').append('<li>' + weekdays[weekday] + ': ' + count + '개</li>');
+                        });
+
                         $('#loadingMessage').hide();
                         $('#forecastResults').show();
                     },

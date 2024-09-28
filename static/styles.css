@@ -353,3 +353,22 @@ img:hover {
     color: #ffffff;
     cursor: pointer;
 }
+#forecastResults {
+    max-height: 400px; /* 적절한 높이를 지정하세요 */
+    overflow-y: auto; /* 세로 스크롤 활성화 */
+    padding: 10px;
+}
+img {
+    max-width: 100%; /* 이미지를 화면 크기에 맞추기 */
+    height: auto;    /* 이미지 비율 유지 */
+}
+@media screen and (max-width: 768px) {
+    /* 작은 화면일 때 레이아웃 조정 */
+    #forecastResults {
+        max-height: 300px;
+    }
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+}

@@ -516,6 +516,7 @@ def forecast_page():
 def run_forecast():
     # 데이터 로드 및 전처리
     df = load_and_preprocess_data(csv_file_path)
+    df2 = load_and_preprocess_data_for_avg(csv_file_path)
     
     # 현재 날짜까지의 데이터만 사용
     current_date = datetime.now().date()
@@ -525,6 +526,18 @@ def run_forecast():
     four_weeks_ago = current_date - timedelta(days=28)
     df = df[df.index.date >= four_weeks_ago]
     
+# 'datetime'에서 시간 추출
+    df2['hour'] = df2['datetime'].dt.hour  
+
+    # 시간별 평균 데이터 계산 및 소수점 제거
+    hourly_avg = df2.groupby('hour')['count'].mean().round(0).astype(int).sort_values(ascending=False)
+
+    # 'datetime'에서 요일 추출 (0=월요일, 6=일요일)
+    df2['weekday'] = df2['datetime'].dt.weekday  
+
+    # 요일별 평균 데이터 계산 및 소수점 제거
+    weekday_avg = df2.groupby('weekday')['count'].mean().round(0).astype(int).sort_values(ascending=False)
+
     # 예측 수행
     forecast_day = train_and_predict(df, 24)  # 1일 = 24시간
     forecast_week = train_and_predict(df, 24*7)  # 1주일 = 7일 * 24시간
@@ -535,8 +548,11 @@ def run_forecast():
     
     return jsonify({
         'day_forecast': day_plot,
-        'week_forecast': week_plot
+        'week_forecast': week_plot,
+        'hourly_analysis': hourly_avg.to_dict(),
+        'weekday_analysis': weekday_avg.to_dict()
     })
+
 
 def load_and_preprocess_data(file_path):
     df = pd.read_csv(file_path, parse_dates=['datetime'])
@@ -548,6 +564,22 @@ def load_and_preprocess_data(file_path):
     df_hourly = df_hourly.asfreq('H', fill_value=0)  # 빈 시간대를 0으로 채웁니다
     
     return df_hourly
+
+def load_and_preprocess_data_for_avg(file_path):
+    # 데이터 로드
+    df = pd.read_csv(file_path, parse_dates=['datetime'])
+    
+    # '등하원소리' 클래스만 필터링
+    df_filtered = df[df['predicted_class'] == '등하원소리']
+    
+    # 'datetime'을 인덱스로 설정
+    df_filtered.set_index('datetime', inplace=True)
+    
+    # 시간 단위로 리샘플링하고 빈 값은 0으로 채움
+    df_resampled = df_filtered.resample('H').size().reset_index(name='count')
+    
+    return df_resampled
+
 
 def train_and_predict(data, periods):
     model = SARIMAX(data, order=(1, 1, 1), seasonal_order=(1, 1, 1, 24*7))  # 24*7 = 1주일
