@@ -649,14 +649,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     
-    // 제어 시작 버튼 클릭 시 신호등 초록불 시간을 10초씩 추가
-    startControlButton.addEventListener('click', function() {
-        if (isAutoControlActive) {
-            alert("자동 제어가 이미 활성화되어 있습니다.");
-            return;
-        }
+// 제어 시작 버튼 클릭 시 신호등 초록불 시간을 10초씩 추가
+startControlButton.addEventListener('click', function() {
+    if (isAutoControlActive) {
+        alert("자동 제어가 이미 활성화되어 있습니다.");
+        return;
+    }
 
-        let invalidTimeRange = false;
+    let invalidTimeRange = false;
     for (let i = 1; i <= timePeriodCount; i++) {
         const startTime = document.getElementById(`startTime${i}`).value;
         const endTime = document.getElementById(`endTime${i}`).value;
@@ -673,83 +673,94 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    
-        const recordingDuration = parseFloat(document.getElementById('recordDuration').value) || 5; // 분 단위
-        const durationInMilliseconds = recordingDuration * 60 * 1000;  // 밀리초로 변환
-    
-        // 제어 버튼 상태 업데이트
-        startControlButton.disabled = true;
-        stopControlButton.disabled = false;
-        recordButton.disabled = true;  // 녹음 버튼 비활성화
-    
-        isAutoControlActive = true;
-    
-        // 첫 자동 제어 시 즉시 녹음 실행
-        startRecording();
-        console.log(`${recordingDuration}분 동안 첫 자동 녹음 시작`);
-    
+    const recordingDuration = parseFloat(document.getElementById('recordDuration').value) || 5; // 분 단위
+    const durationInMilliseconds = recordingDuration * 60 * 1000;  // 밀리초로 변환
+
+    // 제어 버튼 상태 업데이트
+    startControlButton.disabled = true;
+    stopControlButton.disabled = false;
+    recordButton.disabled = true;  // 녹음 버튼 비활성화
+
+    isAutoControlActive = true;
+
+    // 첫 자동 제어 시 즉시 녹음 실행
+    startRecording();
+    console.log(`${recordingDuration}분 동안 첫 자동 녹음 시작`);
+
+    // 설정된 시간 후 녹음 중지
+    setTimeout(function() {
+        stopRecording();
+        console.log("첫 자동 녹음 종료");
+
+        // 비율 계산 (필요 시 바로 중지)
+        checkSchoolSoundRatio(confidencesLog);
+    }, durationInMilliseconds);
+
+    // 1시간마다 자동으로 녹음 반복 실행
+    autoControlInterval = setInterval(function() {
+        confidencesLog = [];  // 1시간마다 녹음 시작 전에 배열 초기화
+        startRecording();  // 1시간마다 녹음 시작
+        console.log(`${recordingDuration}분 동안 자동 녹음 시작`);
+
         // 설정된 시간 후 녹음 중지
         setTimeout(function() {
             stopRecording();
-            console.log("첫 자동 녹음 종료");
-    
-            // 비율 계산 (필요 시 바로 중지)
+            console.log("자동 녹음 종료");
+
+            // 녹음 결과 판단 및 비율 계산
             checkSchoolSoundRatio(confidencesLog);
         }, durationInMilliseconds);
-    
-        // 1시간마다 자동으로 녹음 반복 실행
-        autoControlInterval = setInterval(function() {
-            confidencesLog = [];  // 1시간마다 녹음 시작 전에 배열 초기화
-            startRecording();  // 1시간마다 녹음 시작
-            console.log(`${recordingDuration}분 동안 자동 녹음 시작`);
-    
-            // 설정된 시간 후 녹음 중지
-            setTimeout(function() {
-                stopRecording();
-                console.log("자동 녹음 종료");
-    
-                // 녹음 결과 판단 및 비율 계산
-                checkSchoolSoundRatio(confidencesLog);
-            }, durationInMilliseconds);
-    
-        }, 3600000); // 1시간마다 실행
-    
-        // 제어 버튼 상태 업데이트
-        startControlButton.disabled = true;
-        stopControlButton.disabled = false;
-        recordButton.disabled = true;  // 녹음 버튼 비활성화
-        // 자동 제어나 수동 제어를 활성화
 
-        startControlButton.disabled = true;
-        stopControlButton.disabled = false;
-        
-        recordButton.disabled = true;  // 녹음 버튼 비활성화
+    }, 3600000); // 1시간마다 실행
 
-        // 클릭 이벤트를 막는 코드 추가
-        recordButton.addEventListener('click', function(event) {
-            if (recordButton.disabled) {
-                event.preventDefault();  // 클릭 방지
-                return;  // 클릭 이벤트 실행되지 않도록
-            }
-        });
+    // 제어 버튼 상태 업데이트
+    startControlButton.disabled = true;
+    stopControlButton.disabled = false;
+    recordButton.disabled = true;  // 녹음 버튼 비활성화
+    // 자동 제어나 수동 제어를 활성화
 
-        isAutoControlActive = true;
+    startControlButton.disabled = true;
+    stopControlButton.disabled = false;
 
-        controlInterval = setInterval(function() {
-            const currentTime = new Date();
-            const currentHourMinute = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}`;
+    recordButton.disabled = true;  // 녹음 버튼 비활성화
 
-            for (let i = 1; i <= timePeriodCount; i++) {
-                const startTime = document.getElementById(`startTime${i}`).value;
-                const endTime = document.getElementById(`endTime${i}`).value;
+    // 클릭 이벤트를 막는 코드 추가
+    recordButton.addEventListener('click', function(event) {
+        if (recordButton.disabled) {
+            event.preventDefault();  // 클릭 방지
+            return;  // 클릭 이벤트 실행되지 않도록
+        }
+    });
 
+    isAutoControlActive = true;
+
+    controlInterval = setInterval(function() {
+        const currentTime = new Date();
+        const currentHourMinute = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}`;
+        const currentWeekday = currentTime.getDay();  // 현재 요일 (0 = 일요일, 6 = 토요일)
+
+        // 디버깅을 위해 현재 요일과 비활성화된 요일 출력
+        console.log("현재 요일: ", currentWeekday);
+        console.log("비활성화된 요일들: ", disabledWeekdays);
+
+        for (let i = 1; i <= timePeriodCount; i++) {
+            const startTime = document.getElementById(`startTime${i}`).value;
+            const endTime = document.getElementById(`endTime${i}`).value;
+
+            // 사용자가 선택한 요일이 비활성화된 요일에 포함되어 있는지 확인
+            if (!disabledWeekdays.includes(currentWeekday)) {
+                // 요일이 활성화된 상태일 때만 시간 추가
                 if (startTime && endTime && currentHourMinute >= startTime && currentHourMinute <= endTime) {
                     console.log("자동 제어 활성화 - 10초 추가");
-                    isExtendedGreenScheduled = true; // 초록불 연장 예약
+                    isExtendedGreenScheduled = true;
                 }
+            } else {
+                console.log("오늘은 설정된 요일로 자동 제어가 비활성화됨");
             }
-        }, 1000); // 1초마다 현재 시간과 비교
-    });
+        }
+    }, 1000); // 1초마다 현재 시간과 비교
+});
+
 
 
     
@@ -779,7 +790,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // 현재 시간을 가져와서 사용자가 설정한 시간대에 있는지 확인
         const currentTime = new Date();
         const currentHourMinute = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}`;
-        
+        const currentWeekday = currentTime.getDay();  // 현재 요일 (0 = 일요일, 6 = 토요일)
         let isInUserTimePeriod = false;
         for (let i = 1; i <= timePeriodCount; i++) {
             const startTime = document.getElementById(`startTime${i}`).value;
@@ -791,21 +802,77 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     
-        if (!isInUserTimePeriod && ratio >= 80) {  // 사용자가 설정한 시간대 밖에 있고 비율이 80% 이상일 때
+            // 현재 요일이 비활성화된 요일인지 확인
+    if (disabledWeekdays.includes(currentWeekday)) {
+        // 비활성화된 요일에 소리 비율이 80% 이상이면 자동 제어 중지하고 녹음 시작
+        if (ratio >= 80) {
+            console.log("비활성화된 요일이면서 등하원 소리 비율이 80% 이상 - 자동 제어 중지 및 녹음 시작");
+            clearInterval(autoControlInterval);  // 자동 제어 중지
+            clearInterval(controlInterval);  // 시간대 비교 중지
+            stopControlButton.click();  // 제어 중지 버튼 강제 클릭
+            recordButton.disabled = false;  // 녹음 버튼 활성화
+            stopRecording();  // 현재 녹음 종료
+            
+            console.log("비율 80% 이상 - 자동 제어 중지 및 녹음 종료");
+            
+            // 자동 제어는 중지하지만, 1초마다 계속해서 녹음과 판단 반복
+            startRecording();  // 녹음 다시 시작
+            console.log("자동 제어 중지 후, 녹음 다시 시작");
+        } else {
+            console.log("비활성화된 요일이지만 비율 80% 미만 - 자동 제어 유지");
+        }
+    } else if (isInUserTimePeriod) {
+        // 사용자가 설정한 시간대 안에 있을 때는 자동 제어를 유지
+        console.log("현재 설정된 시간대 안에 있음 - 자동 제어 유지");
+    } else {
+        // 사용자가 설정한 시간대 밖에 있고 비율이 80% 이상일 때만 제어를 중지
+        if (ratio >= 80) {
             console.log("등하원 소리 비율이 80% 이상임 - 제어 중지 및 녹음 종료");
             clearInterval(autoControlInterval);  // 자동 제어 중지
             clearInterval(controlInterval);  // 시간대 비교 중지
             stopControlButton.click();  // 제어 중지 버튼 강제 클릭
             recordButton.disabled = false;  // 녹음 버튼 활성화
-    
+
             stopRecording();  // 현재 녹음 종료
             console.log("비율 80% 이상 - 자동 제어 중지 및 녹음 종료");
-        } else if (isInUserTimePeriod) {
-            console.log("현재 설정된 시간대 안에 있음 - 자동 제어 유지");
+
+            // 자동 제어 중지 후에도 녹음 및 판단 계속 반복
+            startRecording();  // 다시 녹음 시작
+        } else {
+            console.log("설정된 시간대 밖에 있지만 비율이 80% 미만 - 자동 제어 유지");
         }
+    }
     }
     
     
+    
+    let disabledWeekdays = [];  // 자동 제어가 비활성화될 요일들을 저장할 배열
+
+    // 요일 버튼 클릭 시 요일을 토글로 비활성화 설정
+    document.querySelectorAll('.weekday-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const weekday = parseInt(this.dataset.weekday);
+    
+            // 디버깅: 현재 클릭한 요일 출력
+            console.log("클릭한 요일 (0=일요일, 6=토요일): ", weekday);
+    
+            // 해당 요일이 이미 비활성화된 상태면 배열에서 제거
+            if (disabledWeekdays.includes(weekday)) {
+                disabledWeekdays = disabledWeekdays.filter(day => day !== weekday);
+                this.classList.remove('disabled');  // 버튼 스타일 업데이트
+                console.log("요일 활성화: ", weekday);
+            } else {
+                disabledWeekdays.push(weekday);
+                this.classList.add('disabled');  // 버튼 스타일 업데이트
+                console.log("요일 비활성화: ", weekday);
+            }
+    
+            // 디버깅: 비활성화된 요일들 출력
+            console.log("비활성화된 요일들: ", disabledWeekdays);
+        });
+    });
+    
+
 
     
 });

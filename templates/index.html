@@ -31,7 +31,7 @@
                 <div class="timer"></div>
             </div>
             <div class="control-panel">
-                <button id="recordButton">녹음 시작</button>
+                <button id="recordButton">실시간 판단 시작</button>
                 <div class="time-period-container">
                     <div id="timePeriodsDiv"> <!-- timePeriodsDiv 추가 -->
                         <div class="time-period">
@@ -43,16 +43,25 @@
                         </div>
                     </div>
                 
-                    <button id="addTimeButton" class="btn">시간대 추가</button>
+                    <button id="addTimeButton" class="btn">자동 제어 시간대 추가</button>
                 
                     <div class="recording-control">
-                        <label for="recordDuration">녹음 시간 (분):</label>
+                        <label for="recordDuration">자동 제어 1시간 주시 녹음 시간 설정 (분):</label>
                         <input type="number" id="recordDuration" value="5">
                     </div>
-                
+                    <div id="weekdayButtons">
+                        <button class="weekday-btn" data-weekday="1">월</button>
+                        <button class="weekday-btn" data-weekday="2">화</button>
+                        <button class="weekday-btn" data-weekday="3">수</button>
+                        <button class="weekday-btn" data-weekday="4">목</button>
+                        <button class="weekday-btn" data-weekday="5">금</button>
+                        <button class="weekday-btn" data-weekday="6">토</button>
+                        <button class="weekday-btn" data-weekday="0">일</button>
+                    </div>
+                    
                     <div class="control-buttons">
-                        <button id="startControl" class="btn btn-success">제어 시작</button>
-                        <button id="stopControl" class="btn btn-danger" disabled>제어 중지</button>
+                        <button id="startControl" class="btn btn-success">자동 제어 시작</button>
+                        <button id="stopControl" class="btn btn-danger" disabled>자동 제어 중지</button>
                     </div>
                 </div>
                 

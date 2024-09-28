@@ -211,7 +211,9 @@ button:hover {
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     opacity: 0.9;
 }
-
+.recordButton{
+    border-radius: 5px;
+}
 .nav-button {
     display: inline-block;
     padding: 10px 20px;
@@ -371,4 +373,10 @@ img {
         max-width: 100%;
         height: auto;
     }
+}
+/* 비활성화된 요일 버튼 스타일 */
+.weekday-btn.disabled {
+    background-color: #cccccc;
+    color: #666666;
+    cursor: not-allowed;
 }
