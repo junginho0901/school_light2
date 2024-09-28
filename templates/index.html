@@ -10,7 +10,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<!-- MediaElement.js 라이브러리 추가 -->
+  <!-- Socket.IO 클라이언트 라이브러리 추가 -->
+<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+
+<!-- MediaElement.js 라이브러리 추가 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mediaelement/4.2.16/mediaelement-and-player.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mediaelement/4.2.16/mediaelementplayer.min.css" />
+
 </head>
 <body>
     <div class="container">
@@ -47,7 +54,7 @@
                 
                     <div class="recording-control">
                         <label for="recordDuration">자동 제어 1시간 주시 녹음 시간 설정 (분):</label>
-                        <input type="number" id="recordDuration" value="5">
+                        <input type="number" id="recordDuration" value="5" min="0.1" max="60" step="any">
                     </div>
                     <label for="weekdaylabel">자동 제어 중지 날짜:</label>
                     <div id="weekdayButtons">

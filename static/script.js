@@ -114,6 +114,26 @@ document.addEventListener('DOMContentLoaded', function() {
             startRecording();
         }
     }
+    // 입력 시 0.1분 이하 또는 60분 이상 입력 못하도록 제한
+// 입력 시 0.1분 이하 또는 60분 이상 입력 못하도록 제한 (입력 종료 후에 제한)
+const recordDurationInput = document.getElementById('recordDuration');
+
+// 사용자가 입력을 끝냈을 때 값 검사
+recordDurationInput.addEventListener('change', function() {
+    let value = parseFloat(this.value);
+
+    if (value < 0.1 || isNaN(value)) {
+        this.value = 0.1;  // 0.1분 이하로 설정하지 못하도록
+    } else if (value > 60) {
+        this.value = 60;  // 60분 이상 설정하지 못하도록
+    }
+});
+
+// 마우스 스크롤로 값 조정 방지
+recordDurationInput.addEventListener('wheel', function(event) {
+    event.preventDefault();
+}, { passive: true });
+
 
     async function startRecording() {
         try {
