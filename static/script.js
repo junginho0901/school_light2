@@ -633,12 +633,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const newTimePeriod = document.createElement('div');
         newTimePeriod.classList.add('time-period');
         newTimePeriod.innerHTML = `
-            <label for="startTime${timePeriodCount}">시작 시간:</label>
-            <input type="time" id="startTime${timePeriodCount}" name="startTime">
-            <label for="endTime${timePeriodCount}">종료 시간:</label>
-            <input type="time" id="endTime${timePeriodCount}" name="endTime">
-            <button class="remove-time-btn">삭제</button>
-        `;
+        <label for="startTime${timePeriodCount}">시작 시간:</label>
+        <input type="time" id="startTime${timePeriodCount}" name="startTime${timePeriodCount}">
+        <label for="endTime${timePeriodCount}">종료 시간:</label>
+        <input type="time" id="endTime${timePeriodCount}" name="endTime${timePeriodCount}">
+        <button class="remove-time-btn">삭제</button>
+    `;
         timePeriodsDiv.appendChild(newTimePeriod);
 
         // 삭제 버튼 이벤트 리스너 추가
@@ -679,6 +679,11 @@ document.addEventListener('DOMContentLoaded', function () {
             alert("자동 제어가 이미 활성화되어 있습니다.");
             return;
         }
+        if (!validateTimeInputs()) {
+            alert("시간을 입력해주세요.");
+            return;
+        }
+        addTimeButton.disabled = true;
 
         let invalidTimeRange = false;
         for (let i = 1; i <= timePeriodCount; i++) {
@@ -737,6 +742,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         }, 3600000); // 1시간마다 실행
 
+        const deleteButtons = document.querySelectorAll('.remove-time-btn');
+    deleteButtons.forEach(button => {
+        button.disabled = true;
+    });
+
         // 제어 버튼 상태 업데이트
         startControlButton.disabled = true;
         stopControlButton.disabled = false;
@@ -792,6 +802,12 @@ document.addEventListener('DOMContentLoaded', function () {
     stopControlButton.addEventListener('click', function () {
         clearInterval(controlInterval);  // 설정된 setInterval 중지
         clearInterval(autoControlInterval);  // 자동 제어 중지
+        // 삭제 버튼들 활성화
+    const deleteButtons = document.querySelectorAll('.remove-time-btn');
+    deleteButtons.forEach(button => {
+        button.disabled = false;
+    });
+        addTimeButton.disabled = false;
 
         // 제어 및 녹음 버튼 상태 초기화
         startControlButton.disabled = false;
@@ -803,6 +819,19 @@ document.addEventListener('DOMContentLoaded', function () {
         // 녹음 중이었을 경우 녹음 중지
         stopRecording();
     });
+
+    function validateTimeInputs() {
+        let isValid = true;
+        for (let i = 1; i <= timePeriodCount; i++) {
+            const startTime = document.getElementById(`startTime${i}`).value;
+            const endTime = document.getElementById(`endTime${i}`).value;
+            if (!startTime || !endTime) {
+                isValid = false;
+                break;
+            }
+        }
+        return isValid;
+    }
 
     function checkSchoolSoundRatio(confidencesLog) {
         let schoolSoundCount = confidencesLog.filter(conf => conf.class === '등하원소리').length;

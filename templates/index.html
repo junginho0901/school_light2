@@ -40,8 +40,10 @@
             <div class="control-panel">
                 <button id="recordButton">실시간 판단 시작</button>
                 <h2>---------------------------------------------------------------------------</h2>
+                <h1>자동 제어 설정</h1>
+
                 <div class="time-period-container">
-                    <div id="timePeriodsDiv"> <!-- timePeriodsDiv 추가 -->
+                    <div id="timePeriodsDiv">
                         <div class="time-period">
                             <label for="startTime1">시작 시간:</label>
                             <input type="time" id="startTime1" name="startTime">
@@ -57,15 +59,18 @@
                         <label for="recordDuration">자동 제어 1시간 주시 녹음 시간 설정 (분):</label>
                         <input type="number" id="recordDuration" value="5" min="0.1" max="60" step="any">
                     </div>
-                    <label for="weekdaylabel">자동 제어 중지 날짜:</label>
-                    <div id="weekdayButtons">
-                        <button class="weekday-btn" data-weekday="1">월</button>
-                        <button class="weekday-btn" data-weekday="2">화</button>
-                        <button class="weekday-btn" data-weekday="3">수</button>
-                        <button class="weekday-btn" data-weekday="4">목</button>
-                        <button class="weekday-btn" data-weekday="5">금</button>
-                        <button class="weekday-btn" data-weekday="6">토</button>
-                        <button class="weekday-btn" data-weekday="0">일</button>
+                    
+                    <div class="weekday-control">
+                        <span id="weekdayLabel">자동 제어 중지 날짜:</span>
+                        <div id="weekdayButtons" aria-labelledby="weekdayLabel">
+                            <button class="weekday-btn" data-weekday="1">월</button>
+                            <button class="weekday-btn" data-weekday="2">화</button>
+                            <button class="weekday-btn" data-weekday="3">수</button>
+                            <button class="weekday-btn" data-weekday="4">목</button>
+                            <button class="weekday-btn" data-weekday="5">금</button>
+                            <button class="weekday-btn" data-weekday="6">토</button>
+                            <button class="weekday-btn" data-weekday="0">일</button>
+                        </div>
                     </div>
                     
                     <div class="control-buttons">
