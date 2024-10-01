@@ -264,10 +264,17 @@
                     eventSource.onmessage = function(event) {
                         const data = JSON.parse(event.data);
                         console.log("Received progress data:", data);
+                        let statusText = data.status;
+                        if (data.status.includes("완료")) {
+                            statusText += `<br>Loss: ${data.loss.toFixed(4)}, Accuracy: ${data.accuracy.toFixed(4)}<br>
+                                        Val Loss: ${data.val_loss.toFixed(4)}, Val Accuracy: ${data.val_accuracy.toFixed(4)}`;
+                        } else {
+                            statusText += "<br>이전 에포크 결과:";
+                            statusText += `<br>Loss: ${data.loss.toFixed(4)}, Accuracy: ${data.accuracy.toFixed(4)}<br>
+                                        Val Loss: ${data.val_loss.toFixed(4)}, Val Accuracy: ${data.val_accuracy.toFixed(4)}`;
+                        }
                         $('#logContent').html(`현재 진행 상황: Epoch ${data.epoch}/${data.total_epochs}<br>
-                            Status: ${data.status}<br>
-                            Loss: ${data.loss.toFixed(4)}, Accuracy: ${data.accuracy.toFixed(4)}<br>
-                            Val Loss: ${data.val_loss.toFixed(4)}, Val Accuracy: ${data.val_accuracy.toFixed(4)}`);
+                            Status: ${statusText}`);
                         
                         if (data.training_complete) {
                             eventSource.close();

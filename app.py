@@ -875,6 +875,8 @@ def fine_tune_model(original_model_path, data_path, epochs, batch_size):
         def on_epoch_begin(self, epoch, logs=None):
             current_progress["epoch"] = epoch + 1
             current_progress["status"] = f"Epoch {epoch+1}/{self.params['epochs']} 시작"
+            # 이전 에포크의 결과를 유지
+            print(f"Epoch {epoch+1}/{self.params['epochs']} 시작 - 이전 결과: loss: {current_progress['loss']:.4f}, accuracy: {current_progress['accuracy']:.4f}, val_loss: {current_progress['val_loss']:.4f}, val_accuracy: {current_progress['val_accuracy']:.4f}")
 
         def on_epoch_end(self, epoch, logs=None):
             current_progress["epoch"] = epoch + 1
@@ -883,7 +885,8 @@ def fine_tune_model(original_model_path, data_path, epochs, batch_size):
             current_progress["val_loss"] = logs.get('val_loss', 0)
             current_progress["val_accuracy"] = logs.get('val_accuracy', 0)
             current_progress["status"] = f"Epoch {epoch+1}/{self.params['epochs']} 완료"
-            print(f"Epoch {epoch+1}/{self.params['epochs']} - loss: {logs['loss']:.4f}, accuracy: {logs['accuracy']:.4f}, val_loss: {logs['val_loss']:.4f}, val_accuracy: {logs['val_accuracy']:.4f}")
+            print(f"Epoch {epoch+1}/{self.params['epochs']} 완료 - loss: {logs['loss']:.4f}, accuracy: {logs['accuracy']:.4f}, val_loss: {logs['val_loss']:.4f}, val_accuracy: {logs['val_accuracy']:.4f}")
+
 
     def train_model():
         global model, current_progress
@@ -893,7 +896,7 @@ def fine_tune_model(original_model_path, data_path, epochs, batch_size):
                 batch_size=batch_size,
                 validation_data=(X_val, y_val),
                 epochs=epochs,
-                verbose=0,  # verbose를 0으로 설정하여 콘솔 출력을 억제
+                verbose=1,
                 callbacks=[ProgressCallback()]
             )
             model_filename = f'finetuned_model_{datetime.now().strftime("%Y%m%d_%H%M%S")}.h5'
@@ -964,11 +967,14 @@ def finetune():
 @app.route('/train-progress')
 def train_progress():
     def generate():
+        last_epoch = 0
         while True:
-            yield f"data: {json.dumps(current_progress)}\n\n"
-            if current_progress["status"] == "학습 완료" or current_progress["status"].startswith("학습 중 오류 발생"):
+            if current_progress["epoch"] > last_epoch or current_progress["training_complete"]:
+                yield f"data: {json.dumps(current_progress)}\n\n"
+                last_epoch = current_progress["epoch"]
+            if current_progress["training_complete"]:
                 break
-            time.sleep(1)
+            time.sleep(0.1)  # 더 빠른 업데이트를 위해 0.1초로 변경
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 @app.route('/download-model/<filename>')
