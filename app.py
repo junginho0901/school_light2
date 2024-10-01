@@ -26,6 +26,8 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import io
 import base64
+import sys
+
 
 
 # 한글을 지원하는 폰트로 설정 (예: 맑은 고딕 또는 Noto Sans CJK KR)
@@ -173,7 +175,6 @@ def save_high_confidence_data(audio_data, sr, spectrogram, predicted_class, conf
         logging.info(f"고신뢰 데이터가 성공적으로 저장되었습니다. {spectrogram_path}")
     except Exception as e:
         logging.error(f"고신뢰 데이터 저장 중 오류 발생: {e}")
-
 
 
 
@@ -653,12 +654,341 @@ def stop_control():
     # 여기서 추가적으로 필요한 제어 중지 로직을 넣을 수 있습니다.
     logging.info("제어가 중지되었습니다.")
 
-# 초기화 시
-# 임계값 비율을 설정 (예: 80%)
+    # 임계값 비율을 설정 (예: 80%)
 threshold_ratio = 80  # 등하원 소리 비율이 80% 이상일 때 제어 중지
 is_control_active = False  # 제어가 비활성화된 상태로 시작
 
+import os
+import sys
+import logging
+import zipfile
+import shutil
+import numpy as np
+from datetime import datetime
+from flask import Flask, request, jsonify, render_template, send_file, url_for, Response, stream_with_context
+from werkzeug.utils import secure_filename
+import tensorflow as tf
+from tensorflow.keras.models import load_model, Model
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from sklearn.model_selection import train_test_split
+import librosa
+import threading
+import json
+import time
+
+
+# 설정
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'zip'}
+ORIGINAL_MODEL_PATH = r'C:\Users\Jeong Inho\Desktop\project\project_root\model\fine_tuned_mobilenetv2_spectrogram_model_0827_50epoch.h5'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# 로깅 설정
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# 파일 핸들러 추가 (UTF-8 인코딩 사용)
+file_handler = logging.FileHandler('app.log', encoding='utf-8')
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(file_handler)
+
+# 원본 클래스 이름
+ORIGINAL_CLASS_NAMES = ['기차', '등하원소리', '비행기', '이륜차경적', '이륜차 주행음',
+                        '지하철', '차량경적', '차량사이렌', '차량주행음', '헬리콥터']
+
+current_progress = {"epoch": 0, "total_epochs": 0, "status": "", "training_complete": False, "loss": 0, "accuracy": 0, "val_loss": 0, "val_accuracy": 0}
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def safe_decode(s):
+    if isinstance(s, bytes):
+        return s.decode('utf-8', errors='replace')
+    return s
+
+def extract_zip_safely(zip_path, extract_to):
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        for file in zip_ref.namelist():
+            try:
+                decoded_filename = file.encode('cp437').decode('utf-8')
+            except UnicodeDecodeError:
+                try:
+                    decoded_filename = file.encode('cp437').decode('euc-kr')
+                except UnicodeDecodeError:
+                    decoded_filename = file
+                    logging.warning(f"Failed to decode filename: {file}, using original name")
+
+            target_path = os.path.join(extract_to, decoded_filename)
+            
+            if decoded_filename.endswith('/'):
+                os.makedirs(target_path, exist_ok=True)
+                continue
+
+            try:
+                os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                with zip_ref.open(file) as source, open(target_path, "wb") as target:
+                    shutil.copyfileobj(source, target)
+            except Exception as e:
+                logging.error(f"Error extracting file {decoded_filename}: {str(e)}")
+
+    logging.info(f"Zip file extracted to {extract_to}")
+
+
+def process_audio(file_path, target_length=15, sr=22050):
+    y, _ = librosa.load(file_path, sr=sr, duration=target_length)
+    if len(y) < sr * target_length:
+        y = np.pad(y, (0, sr * target_length - len(y)))
+    return y
+
+def create_spectrogram(y, sr, n_mels=128, fmax=8000):
+    S = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=n_mels, fmax=fmax)
+    S_dB = librosa.power_to_db(S, ref=np.max)
+    
+    S_dB_normalized = (S_dB - S_dB.min()) / (S_dB.max() - S_dB.min())
+    
+    img = Image.fromarray(np.uint8(S_dB_normalized * 255), 'L')
+    
+    img_resized = img.resize((224, 224), Image.LANCZOS)
+    
+    img_rgb = Image.merge('RGB', (img_resized, img_resized, img_resized))
+    
+    return np.array(img_rgb)
+
+
+def find_class_folders(root_path, class_names):
+    for dirpath, dirnames, filenames in os.walk(root_path):
+        # 현재 디렉토리에 클래스 이름과 일치하는 폴더가 있는지 확인
+        class_dirs = [d for d in dirnames if d in class_names]
+        if class_dirs:
+            return dirpath
+    return None
+
+def prepare_data(data_path, target_length=15, sr=22050):
+    spectrograms = []
+    labels = []
+    class_names = ORIGINAL_CLASS_NAMES.copy()
+    class_to_index = {name: index for index, name in enumerate(class_names)}
+
+    class_folder_path = find_class_folders(data_path, class_names)
+    if class_folder_path is None:
+        raise ValueError("No class folders found. Please check your ZIP file structure.")
+
+    for class_name in class_names:
+        class_path = os.path.join(class_folder_path, class_name)
+        
+        if not os.path.isdir(class_path):
+            logger.warning(f"폴더가 존재하지 않습니다: {class_path}")
+            continue
+        
+        logger.info(f"'{class_name}' 클래스 폴더 경로: {class_path}")
+        wav_files = [f for f in os.listdir(class_path) if f.lower().endswith('.wav')]
+
+        if not wav_files:
+            logger.warning(f"'{class_name}' 폴더에 유효한 WAV 파일이 없습니다. 경로: {class_path}")
+            continue
+        
+        logger.info(f"'{class_name}' 클래스 폴더에서 {len(wav_files)}개의 WAV 파일을 발견했습니다.")
+
+        for file_name in wav_files:
+            file_path = os.path.join(class_path, file_name)
+            try:
+                y, sr = librosa.load(file_path, duration=target_length, sr=sr)
+                if len(y) < sr * target_length:
+                    y = np.pad(y, (0, sr * target_length - len(y)))
+                spectrogram = create_spectrogram(y, sr)
+                spectrograms.append(spectrogram)
+                labels.append(class_to_index[class_name])
+            except Exception as e:
+                logger.error(f"파일을 처리하는 중 오류가 발생했습니다: {file_path}, 에러: {str(e)}")
+
+    if not spectrograms:
+        raise ValueError("No valid data found. Please check your data path and ensure there are WAV files in the folders.")
+
+    return np.array(spectrograms), np.array(labels), class_names
+
+def fine_tune_model(original_model_path, data_path, epochs, batch_size):
+    global current_progress
+    current_progress["total_epochs"] = epochs
+    
+    tf.config.run_functions_eagerly(True)
+    
+    spectrograms, labels, class_names = prepare_data(data_path)
+    num_classes = len(class_names)
+    
+    if len(spectrograms) == 0:
+        raise ValueError("No valid data found. Please check your data path and ensure there are WAV files in the folders.")
+
+    input_shape = spectrograms.shape[1:]
+    logger.info(f"Input shape: {input_shape}")
+    logger.info(f"Spectrograms shape: {spectrograms.shape}")
+    logger.info(f"Labels shape: {labels.shape}")
+    
+    if np.isnan(spectrograms).any() or np.isinf(spectrograms).any():
+        raise ValueError("Invalid values (NaN or Inf) found in spectrograms.")
+    
+    X_train, X_val, y_train, y_val = train_test_split(spectrograms, labels, test_size=0.2, random_state=42)
+    
+    logger.info(f"Training data shape: {X_train.shape}")
+    logger.info(f"Validation data shape: {X_val.shape}")
+    
+    y_train = tf.keras.utils.to_categorical(y_train, num_classes)
+    y_val = tf.keras.utils.to_categorical(y_val, num_classes)
+    
+    logger.info(f"y_train shape: {y_train.shape}")
+    logger.info(f"y_val shape: {y_val.shape}")
+    
+    base_model = load_model(original_model_path)
+    
+    inputs = tf.keras.Input(shape=(224, 224, 3))
+    x = base_model(inputs)
+    outputs = tf.keras.layers.Dense(num_classes, activation='softmax', name='new_output')(x)
+    model = tf.keras.Model(inputs=inputs, outputs=outputs)
+
+    for layer in base_model.layers[:-20]:
+        layer.trainable = False
+
+    model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'], run_eagerly=True)
+
+    model.summary()
+
+    datagen = ImageDataGenerator(
+        rotation_range=20,
+        width_shift_range=0.2,
+        height_shift_range=0.2,
+        horizontal_flip=True,
+        preprocessing_function=lambda x: x / 255.0
+    )
+
+    test_gen = datagen.flow(X_train, y_train, batch_size=batch_size)
+    test_batch = next(test_gen)
+    logger.info(f"Test batch shapes: X={test_batch[0].shape}, y={test_batch[1].shape}")
+
+    logger.info(f"X_train min: {X_train.min()}, max: {X_train.max()}")
+    logger.info(f"y_train min: {y_train.min()}, max: {y_train.max()}")
+
+    class ProgressCallback(tf.keras.callbacks.Callback):
+        def on_epoch_begin(self, epoch, logs=None):
+            current_progress["epoch"] = epoch + 1
+            current_progress["status"] = f"Epoch {epoch+1}/{self.params['epochs']} 시작"
+
+        def on_epoch_end(self, epoch, logs=None):
+            current_progress["epoch"] = epoch + 1
+            current_progress["loss"] = logs.get('loss', 0)
+            current_progress["accuracy"] = logs.get('accuracy', 0)
+            current_progress["val_loss"] = logs.get('val_loss', 0)
+            current_progress["val_accuracy"] = logs.get('val_accuracy', 0)
+            current_progress["status"] = f"Epoch {epoch+1}/{self.params['epochs']} 완료"
+            print(f"Epoch {epoch+1}/{self.params['epochs']} - loss: {logs['loss']:.4f}, accuracy: {logs['accuracy']:.4f}, val_loss: {logs['val_loss']:.4f}, val_accuracy: {logs['val_accuracy']:.4f}")
+
+    def train_model():
+        global model, current_progress
+        try:
+            history = model.fit(
+                X_train, y_train,
+                batch_size=batch_size,
+                validation_data=(X_val, y_val),
+                epochs=epochs,
+                verbose=0,  # verbose를 0으로 설정하여 콘솔 출력을 억제
+                callbacks=[ProgressCallback()]
+            )
+            model_filename = f'finetuned_model_{datetime.now().strftime("%Y%m%d_%H%M%S")}.h5'
+            model_path = os.path.join(app.config['UPLOAD_FOLDER'], model_filename)
+            model.save(model_path)
+            current_progress["status"] = "학습 완료"
+            current_progress["model_path"] = model_filename
+            current_progress["training_complete"] = True
+            print("Training completed successfully:", current_progress)
+        except Exception as e:
+            current_progress["status"] = f"학습 중 오류 발생: {str(e)}"
+            current_progress["training_complete"] = True
+            logger.error(f"Error during model.fit: {str(e)}")
+    thread = threading.Thread(target=train_model)
+    thread.start()
+
+    return model, class_names
+
+@app.route('/finetune-page')
+def finetune_page():
+    return render_template('finetune.html')
+
+@app.route('/finetune', methods=['POST'])
+def finetune():
+    if 'dataFolder' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['dataFolder']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    if file and allowed_file(file.filename):
+        try:
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+
+            extract_path = os.path.join(app.config['UPLOAD_FOLDER'], 'extracted')
+
+            if os.path.exists(extract_path):
+                shutil.rmtree(extract_path)
+            os.makedirs(extract_path)
+
+            extract_zip_safely(file_path, extract_path)
+
+            logger.info(f"Extracted path: {extract_path}")
+
+            class_folders = [f for f in os.listdir(extract_path) if os.path.isdir(os.path.join(extract_path, f))]
+            if not class_folders:
+                return jsonify({'error': 'No class folders found after extraction'}), 400
+
+            epochs = int(request.form.get('epochs', 20))
+            batch_size = int(request.form.get('batchSize', 32))
+
+            logger.info(f"Starting fine-tuning with epochs={epochs}, batch_size={batch_size}")
+
+            fine_tune_model(ORIGINAL_MODEL_PATH, extract_path, epochs, batch_size)
+
+            return jsonify({
+                'status': 'training',
+                'message': '학습이 시작되었습니다. 진행 상황을 확인하세요.'
+            }), 202
+
+        except Exception as e:
+            logger.error(f"Error during fine-tuning: {str(e)}", exc_info=True)
+            return jsonify({'error': str(e)}), 500
+
+    return jsonify({'error': 'File type not allowed'}), 400
+
+@app.route('/train-progress')
+def train_progress():
+    def generate():
+        while True:
+            yield f"data: {json.dumps(current_progress)}\n\n"
+            if current_progress["status"] == "학습 완료" or current_progress["status"].startswith("학습 중 오류 발생"):
+                break
+            time.sleep(1)
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+@app.route('/download-model/<filename>')
+def download_model(filename):
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    print(f"Attempting to download file: {file_path}")
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True)
+    else:
+        print(f"File not found: {file_path}")
+        return "File not found", 404
+
+@app.route('/download-class-names/<filename>')
+def download_class_names(filename):
+    return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename), as_attachment=True)
+
 if __name__ == '__main__':
+    app.config['UPLOAD_FOLDER'] = 'uploads'
+    if not os.path.exists(app.config['UPLOAD_FOLDER']):
+        os.makedirs(app.config['UPLOAD_FOLDER'])
     load_predictions_from_csv()
     load_adjustments_from_csv()
     socketio.run(app, debug=True)

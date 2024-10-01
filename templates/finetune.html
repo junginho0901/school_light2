@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>모델 파인튜닝</title>
+    <style>
+        /* 기본 스타일 */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        #dropArea {
+            border: 2px dashed #ccc;
+            border-radius: 20px;
+            width: 480px;
+            font-family: sans-serif;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #fff;
+        }
+
+        #dropArea.highlight {
+            border-color: purple;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            border: 1px solid #007bff;
+        }
+
+        .button:hover {
+            background: #0056b3;
+        }
+
+        #fileInfo {
+            margin: 15px 0;
+        }
+
+        .form-group {
+            margin: 15px 0;
+        }
+
+        .form-group label {
+            font-weight: bold;
+            display: block;
+        }
+
+        #progress {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #progressBar {
+            width: 100%;
+        }
+
+        #result {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .btn:hover {
+            background: #218838;
+        }
+
+        #logs {
+            margin-top: 20px;
+            background-color: #eaeaea;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>모델 파인튜닝</h1>
+            <nav>
+                <a href="{{ url_for('index') }}" class="nav-button">← 메인 페이지로 돌아가기</a>
+            </nav>
+        </header>
+        <main>
+            <div id="dropArea">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <p>ZIP 파일을 여기에 드래그하거나 클릭하여 선택하세요.</p>
+                    <p style="font-size: 12px;">학습 시 오류가 뜬다면 zip파일 인코딩 형식을 바꿔서 시도 해보세요.</p>
+
+                    <input type="file" id="fileElem" name="dataFolder" accept=".zip" onchange="handleFiles(this.files)"
+                        hidden>
+                    <label class="button" for="fileElem">파일 선택</label>
+                </form>
+                <div id="fileInfo"></div>
+                <div class="form-group">
+                    <label for="epochs">Epochs:</label>
+                    <input type="number" id="epochs" name="epochs" value="10" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="batchSize">Batch Size:</label>
+                    <input type="number" id="batchSize" name="batchSize" value="32" min="1" required>
+                </div>
+                <div style="display: flex; justify-content: center; align-items: center;">
+                    <button id="startFineTuning" class="btn" style="display: none;">파인튜닝 시작</button>
+                </div>
+            </div>
+
+            <div id="progress" style="display: none;">
+                <p>파일 업로드 중..<span id="progressValue">0</span>%</p>
+                <progress id="progressBar" value="0" max="100"></progress>
+            </div>
+
+            <div id="logs" style="display: none;">
+                <h3>실시간 로그</h3>
+                <div id="logContent"></div>
+            </div>
+
+            <div id="result" style="display: none;">
+                <h2>파인튜닝 완료</h2>
+                <a id="downloadLink" href="#" class="btn">모델 다운로드</a>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        let dropArea = document.getElementById('dropArea');
+        let fileElem = document.getElementById('fileElem');
+        let fileInfo = document.getElementById('fileInfo');
+        let startButton = document.getElementById('startFineTuning');
+        let selectedFile = null;
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropArea.classList.add('highlight');
+        }
+
+        function unhighlight(e) {
+            dropArea.classList.remove('highlight');
+        }
+
+        dropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            if (files.length > 0) {
+                selectedFile = files[0];
+                if (selectedFile.type === "application/zip" || selectedFile.name.endsWith('.zip')) {
+                    fileInfo.textContent = `선택된 파일: ${selectedFile.name}`;
+                    startButton.style.display = 'block';
+                } else {
+                    fileInfo.textContent = "오류: ZIP 파일만 허용됩니다.";
+                    startButton.style.display = 'none';
+                    selectedFile = null;
+                }
+            }
+        }
+
+        startButton.addEventListener('click', function () {
+            if (!selectedFile) {
+                alert('파일을 선택해주세요.');
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append('dataFolder', selectedFile);
+            formData.append('epochs', document.getElementById('epochs').value);
+            formData.append('batchSize', document.getElementById('batchSize').value);
+
+            $.ajax({
+                url: '/finetune',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                xhr: function () {
+                    var xhr = new window.XMLHttpRequest();
+                    xhr.upload.addEventListener("progress", function (evt) {
+                        if (evt.lengthComputable) {
+                            var percentComplete = (evt.loaded / evt.total) * 100;
+                            $('#progressValue').text(Math.round(percentComplete));
+                            $('#progressBar').val(percentComplete);
+                        }
+                    }, false);
+                    return xhr;
+                },
+                beforeSend: function () {
+                    $('#progress').show();
+                    startButton.style.display = 'none';
+                },
+                success: function (response) {
+                    console.log('파일 업로드 성공, 학습 시작...');
+                    $('#logs').show();
+
+                    const eventSource = new EventSource('/train-progress');
+                    eventSource.onmessage = function(event) {
+                        const data = JSON.parse(event.data);
+                        console.log("Received progress data:", data);
+                        $('#logContent').html(`현재 진행 상황: Epoch ${data.epoch}/${data.total_epochs}<br>
+                            Status: ${data.status}<br>
+                            Loss: ${data.loss.toFixed(4)}, Accuracy: ${data.accuracy.toFixed(4)}<br>
+                            Val Loss: ${data.val_loss.toFixed(4)}, Val Accuracy: ${data.val_accuracy.toFixed(4)}`);
+                        
+                        if (data.training_complete) {
+                            eventSource.close();
+                            $('#progress').hide();
+                            $('#result').show();
+                            if (data.status === "학습 완료" && data.model_path) {
+                                $('#result h2').text("파인튜닝 완료");
+                                $('#downloadLink').attr('href', `/download-model/${data.model_path}`);
+                                $('#downloadLink').show();
+                            } else {
+                                $('#result h2').text("파인튜닝 실패");
+                                $('#downloadLink').hide();
+                            }
+                            console.log("Final status:", data.status);
+                        }
+                    };
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error('Error:', textStatus, errorThrown);
+                    console.log('Response:', jqXHR.responseText);
+                    alert('파인튜닝 중 오류가 발생했습니다: ' + jqXHR.responseText);
+                    $('#progress').hide();
+                    startButton.style.display = 'block';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
