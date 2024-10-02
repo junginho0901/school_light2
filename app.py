@@ -4,8 +4,9 @@ import csv
 from datetime import datetime, time, timedelta
 from collections import defaultdict
 import tempfile
+from typing import List
 import zipfile
-from flask import Flask, request, jsonify, render_template, send_file, abort
+from flask import Flask, request, jsonify, render_template, send_file, Response, stream_with_context
 from flask_socketio import SocketIO, emit
 import numpy as np
 import librosa
@@ -658,50 +659,47 @@ def stop_control():
 threshold_ratio = 80  # 등하원 소리 비율이 80% 이상일 때 제어 중지
 is_control_active = False  # 제어가 비활성화된 상태로 시작
 
+
+
+
+
+
+
 import os
-import sys
-import logging
-import zipfile
-import shutil
 import numpy as np
-from datetime import datetime
-from flask import Flask, request, jsonify, render_template, send_file, url_for, Response, stream_with_context
-from werkzeug.utils import secure_filename
 import tensorflow as tf
-from tensorflow.keras.models import load_model, Model
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from sklearn.model_selection import train_test_split
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping
 import librosa
+import logging
+from flask import Flask, request, jsonify, render_template, send_file, Response
+from werkzeug.utils import secure_filename
+import shutil
+import zipfile
 import threading
 import json
 import time
+from datetime import datetime
 
-
-# 설정
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'zip'}
 ORIGINAL_MODEL_PATH = r'C:\Users\Jeong Inho\Desktop\project\project_root\model\fine_tuned_mobilenetv2_spectrogram_model_0827_50epoch.h5'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# 파일 핸들러 추가 (UTF-8 인코딩 사용)
 file_handler = logging.FileHandler('app.log', encoding='utf-8')
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(file_handler)
 
-# 원본 클래스 이름
 ORIGINAL_CLASS_NAMES = ['기차', '등하원소리', '비행기', '이륜차경적', '이륜차 주행음',
                         '지하철', '차량경적', '차량사이렌', '차량주행음', '헬리콥터']
 
 current_progress = {"epoch": 0, "total_epochs": 0, "status": "", "training_complete": False, "loss": 0, "accuracy": 0, "val_loss": 0, "val_accuracy": 0}
-
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -710,211 +708,299 @@ def safe_decode(s):
     if isinstance(s, bytes):
         return s.decode('utf-8', errors='replace')
     return s
+import os
+import zipfile
+import shutil
+import logging
+
+logger = logging.getLogger(__name__)
 
 def extract_zip_safely(zip_path, extract_to):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         for file in zip_ref.namelist():
             try:
-                decoded_filename = file.encode('cp437').decode('utf-8')
+                # CP437 인코딩을 사용하여 파일명 디코딩 시도
+                decoded_filename = file.encode('cp437').decode('euc-kr')
             except UnicodeDecodeError:
+                # 실패 시 UTF-8로 디코딩 시도
                 try:
-                    decoded_filename = file.encode('cp437').decode('euc-kr')
+                    decoded_filename = file.encode('cp437').decode('utf-8')
                 except UnicodeDecodeError:
+                    # 모든 디코딩 실패 시 원래 파일명 사용
                     decoded_filename = file
-                    logging.warning(f"Failed to decode filename: {file}, using original name")
+                    logger.warning(f"Failed to decode filename: {file}, using original name")
 
             target_path = os.path.join(extract_to, decoded_filename)
             
-            if decoded_filename.endswith('/'):
+            if file.endswith('/'):
                 os.makedirs(target_path, exist_ok=True)
-                continue
-
-            try:
+            else:
+                # 디렉토리 생성
                 os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                # 파일 추출
                 with zip_ref.open(file) as source, open(target_path, "wb") as target:
                     shutil.copyfileobj(source, target)
-            except Exception as e:
-                logging.error(f"Error extracting file {decoded_filename}: {str(e)}")
 
-    logging.info(f"Zip file extracted to {extract_to}")
+    logger.info(f"Zip file extracted to {extract_to}")
+    log_directory_structure(extract_to)
+
+def log_directory_structure(path, level=0):
+    for item in os.listdir(path):
+        item_path = os.path.join(path, item)
+        logger.info("  " * level + f"- {item}")
+        if os.path.isdir(item_path):
+            log_directory_structure(item_path, level + 1)
 
 
-def process_audio(file_path, target_length=15, sr=22050):
-    y, _ = librosa.load(file_path, sr=sr, duration=target_length)
-    if len(y) < sr * target_length:
-        y = np.pad(y, (0, sr * target_length - len(y)))
-    return y
+def find_wav_files(path):
+    wav_files = []
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            if file.lower().endswith('.wav'):
+                wav_files.append(os.path.join(root, file))
+    return wav_files
 
 def create_spectrogram(y, sr, n_mels=128, fmax=8000):
+    # Melspectrogram 생성
     S = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=n_mels, fmax=fmax)
-    S_dB = librosa.power_to_db(S, ref=np.max)
+    S_DB = librosa.power_to_db(S, ref=np.max)
     
-    S_dB_normalized = (S_dB - S_dB.min()) / (S_dB.max() - S_dB.min())
+    # 정규화
+    S_DB_normalized = (S_DB - S_DB.min()) / (S_DB.max() - S_DB.min())
     
-    img = Image.fromarray(np.uint8(S_dB_normalized * 255), 'L')
+    # 스펙트로그램을 이미지로 변환
+    plt.figure(figsize=(2, 2))
+    plt.axis('off')
+    librosa.display.specshow(S_DB_normalized, sr=sr, fmax=fmax)
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=100, bbox_inches='tight', pad_inches=0)
+    buf.seek(0)
+    img = Image.open(buf)
+    img_array = np.array(img.convert('RGB').resize((224, 224)))
+    plt.close()
     
-    img_resized = img.resize((224, 224), Image.LANCZOS)
-    
-    img_rgb = Image.merge('RGB', (img_resized, img_resized, img_resized))
-    
-    return np.array(img_rgb)
+    return img_array
 
 
-def find_class_folders(root_path, class_names):
-    for dirpath, dirnames, filenames in os.walk(root_path):
-        # 현재 디렉토리에 클래스 이름과 일치하는 폴더가 있는지 확인
-        class_dirs = [d for d in dirnames if d in class_names]
-        if class_dirs:
-            return dirpath
-    return None
-
-def prepare_data(data_path, target_length=15, sr=22050):
+def process_wav_files(folder_path, target_length=15, sr=22050):
     spectrograms = []
     labels = []
-    class_names = ORIGINAL_CLASS_NAMES.copy()
-    class_to_index = {name: index for index, name in enumerate(class_names)}
+    class_names = []
 
-    class_folder_path = find_class_folders(data_path, class_names)
-    if class_folder_path is None:
-        raise ValueError("No class folders found. Please check your ZIP file structure.")
+    wav_files = find_wav_files(folder_path)
+    logger.info(f"Found {len(wav_files)} WAV files")
 
-    for class_name in class_names:
-        class_path = os.path.join(class_folder_path, class_name)
+    if not wav_files:
+        raise ValueError("No WAV files found in the extracted directory")
+
+    for wav_file in wav_files:
+        class_name = os.path.basename(os.path.dirname(wav_file))
+        if class_name not in class_names:
+            class_names.append(class_name)
         
-        if not os.path.isdir(class_path):
-            logger.warning(f"폴더가 존재하지 않습니다: {class_path}")
-            continue
-        
-        logger.info(f"'{class_name}' 클래스 폴더 경로: {class_path}")
-        wav_files = [f for f in os.listdir(class_path) if f.lower().endswith('.wav')]
+        try:
+            y, sr = librosa.load(wav_file, duration=target_length, sr=sr)
+            if len(y) < sr * target_length:
+                y = np.pad(y, (0, sr * target_length - len(y)))
+            spectrogram = create_spectrogram(y, sr)
+            spectrograms.append(spectrogram)
+            labels.append(class_names.index(class_name))
+        except Exception as e:
+            logger.error(f"Error processing file {wav_file}: {str(e)}")
 
-        if not wav_files:
-            logger.warning(f"'{class_name}' 폴더에 유효한 WAV 파일이 없습니다. 경로: {class_path}")
-            continue
-        
-        logger.info(f"'{class_name}' 클래스 폴더에서 {len(wav_files)}개의 WAV 파일을 발견했습니다.")
-
-        for file_name in wav_files:
-            file_path = os.path.join(class_path, file_name)
-            try:
-                y, sr = librosa.load(file_path, duration=target_length, sr=sr)
-                if len(y) < sr * target_length:
-                    y = np.pad(y, (0, sr * target_length - len(y)))
-                spectrogram = create_spectrogram(y, sr)
-                spectrograms.append(spectrogram)
-                labels.append(class_to_index[class_name])
-            except Exception as e:
-                logger.error(f"파일을 처리하는 중 오류가 발생했습니다: {file_path}, 에러: {str(e)}")
-
-    if not spectrograms:
-        raise ValueError("No valid data found. Please check your data path and ensure there are WAV files in the folders.")
+    logger.info(f"Processed {len(spectrograms)} spectrograms")
+    logger.info(f"Found {len(class_names)} classes: {class_names}")
 
     return np.array(spectrograms), np.array(labels), class_names
 
-def fine_tune_model(original_model_path, data_path, epochs, batch_size):
-    global current_progress
-    current_progress["total_epochs"] = epochs
-    
-    tf.config.run_functions_eagerly(True)
-    
-    spectrograms, labels, class_names = prepare_data(data_path)
-    num_classes = len(class_names)
+import numpy as np
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+def prepare_data(extract_path, target_size=(224, 224), batch_size=32):
+    spectrograms, labels, class_names = process_wav_files(extract_path)
     
     if len(spectrograms) == 0:
-        raise ValueError("No valid data found. Please check your data path and ensure there are WAV files in the folders.")
+        raise ValueError("No valid WAV files found. Please check your data.")
 
-    input_shape = spectrograms.shape[1:]
-    logger.info(f"Input shape: {input_shape}")
-    logger.info(f"Spectrograms shape: {spectrograms.shape}")
-    logger.info(f"Labels shape: {labels.shape}")
-    
-    if np.isnan(spectrograms).any() or np.isinf(spectrograms).any():
-        raise ValueError("Invalid values (NaN or Inf) found in spectrograms.")
-    
-    X_train, X_val, y_train, y_val = train_test_split(spectrograms, labels, test_size=0.2, random_state=42)
-    
-    logger.info(f"Training data shape: {X_train.shape}")
-    logger.info(f"Validation data shape: {X_val.shape}")
-    
-    y_train = tf.keras.utils.to_categorical(y_train, num_classes)
-    y_val = tf.keras.utils.to_categorical(y_val, num_classes)
-    
-    logger.info(f"y_train shape: {y_train.shape}")
-    logger.info(f"y_val shape: {y_val.shape}")
-    
-    base_model = load_model(original_model_path)
-    
-    inputs = tf.keras.Input(shape=(224, 224, 3))
-    x = base_model(inputs)
-    outputs = tf.keras.layers.Dense(num_classes, activation='softmax', name='new_output')(x)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    num_classes = len(class_names)
+    logger.info(f"Number of classes detected: {num_classes}")
+    logger.info(f"Class names: {class_names}")
 
-    for layer in base_model.layers[:-20]:
-        layer.trainable = False
+    # 레이블을 원-핫 인코딩으로 변환
+    labels = to_categorical(labels, num_classes=num_classes)
 
-    model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'], run_eagerly=True)
+    # 데이터를 학습 세트와 검증 세트로 분할
+    indices = np.arange(spectrograms.shape[0])
+    np.random.shuffle(indices)
+    split = int(0.8 * len(indices))
+    train_indices, val_indices = indices[:split], indices[split:]
 
-    model.summary()
+    train_spectrograms, train_labels = spectrograms[train_indices], labels[train_indices]
+    val_spectrograms, val_labels = spectrograms[val_indices], labels[val_indices]
 
-    datagen = ImageDataGenerator(
+    # ImageDataGenerator 사용
+    train_datagen = ImageDataGenerator(
+        rescale=1./255,
         rotation_range=20,
         width_shift_range=0.2,
         height_shift_range=0.2,
-        horizontal_flip=True,
-        preprocessing_function=lambda x: x / 255.0
+        horizontal_flip=True
     )
 
-    test_gen = datagen.flow(X_train, y_train, batch_size=batch_size)
-    test_batch = next(test_gen)
-    logger.info(f"Test batch shapes: X={test_batch[0].shape}, y={test_batch[1].shape}")
+    val_datagen = ImageDataGenerator(rescale=1./255)
 
-    logger.info(f"X_train min: {X_train.min()}, max: {X_train.max()}")
-    logger.info(f"y_train min: {y_train.min()}, max: {y_train.max()}")
+    train_generator = train_datagen.flow(
+        train_spectrograms, train_labels,
+        batch_size=batch_size,
+        shuffle=True
+    )
 
-    class ProgressCallback(tf.keras.callbacks.Callback):
-        def on_epoch_begin(self, epoch, logs=None):
-            current_progress["epoch"] = epoch + 1
-            current_progress["status"] = f"Epoch {epoch+1}/{self.params['epochs']} 시작"
-            # 이전 에포크의 결과를 유지
-            print(f"Epoch {epoch+1}/{self.params['epochs']} 시작 - 이전 결과: loss: {current_progress['loss']:.4f}, accuracy: {current_progress['accuracy']:.4f}, val_loss: {current_progress['val_loss']:.4f}, val_accuracy: {current_progress['val_accuracy']:.4f}")
+    val_generator = val_datagen.flow(
+        val_spectrograms, val_labels,
+        batch_size=batch_size,
+        shuffle=False
+    )
 
-        def on_epoch_end(self, epoch, logs=None):
-            current_progress["epoch"] = epoch + 1
-            current_progress["loss"] = logs.get('loss', 0)
-            current_progress["accuracy"] = logs.get('accuracy', 0)
-            current_progress["val_loss"] = logs.get('val_loss', 0)
-            current_progress["val_accuracy"] = logs.get('val_accuracy', 0)
-            current_progress["status"] = f"Epoch {epoch+1}/{self.params['epochs']} 완료"
-            print(f"Epoch {epoch+1}/{self.params['epochs']} 완료 - loss: {logs['loss']:.4f}, accuracy: {logs['accuracy']:.4f}, val_loss: {logs['val_loss']:.4f}, val_accuracy: {logs['val_accuracy']:.4f}")
+    logger.info(f"Found {len(train_spectrograms)} training samples")
+    logger.info(f"Found {len(val_spectrograms)} validation samples")
+
+    return train_generator, val_generator, class_names
+
+import tensorflow as tf
+from tensorflow.keras.models import load_model
+from tensorflow.keras.layers import Dense, Flatten, Dropout
 
 
-    def train_model():
-        global model, current_progress
-        try:
-            history = model.fit(
-                X_train, y_train,
-                batch_size=batch_size,
-                validation_data=(X_val, y_val),
-                epochs=epochs,
-                verbose=1,
-                callbacks=[ProgressCallback()]
-            )
-            model_filename = f'finetuned_model_{datetime.now().strftime("%Y%m%d_%H%M%S")}.h5'
-            model_path = os.path.join(app.config['UPLOAD_FOLDER'], model_filename)
-            model.save(model_path)
-            current_progress["status"] = "학습 완료"
-            current_progress["model_path"] = model_filename
-            current_progress["training_complete"] = True
-            print("Training completed successfully:", current_progress)
-        except Exception as e:
-            current_progress["status"] = f"학습 중 오류 발생: {str(e)}"
-            current_progress["training_complete"] = True
-            logger.error(f"Error during model.fit: {str(e)}")
-    thread = threading.Thread(target=train_model)
-    thread.start()
+def fine_tune_model(original_model_path, num_classes):
+    base_model = load_model(original_model_path)
+    
+    # 기존 모델의 출력 레이어를 제거
+    x = base_model.layers[-3].output  # dropout 레이어 이전까지
+    
+    # 새로운 출력 레이어 추가
+    x = Dropout(0.5)(x)  # dropout 비율은 원본 모델과 동일하게 유지
+    outputs = Dense(num_classes, activation='softmax', name='new_output')(x)
+    
+    model = tf.keras.Model(inputs=base_model.input, outputs=outputs)
+    
+    # 기존 레이어들을 고정 (선택적)
+    for layer in base_model.layers[:-3]:  # 마지막 Dense 레이어와 그 이전의 Dropout 레이어만 훈련 가능하도록 설정
+        layer.trainable = False
+    
+    return model
 
-    return model, class_names
+def log_original_model_structure(model_path):
+    original_model = load_model(model_path)
+    logger.info("Original model structure:")
+    original_model.summary(print_fn=lambda x: logger.info(x))
 
+
+
+def log_model_structure(model):
+    logger.info("Model structure:")
+    for i, layer in enumerate(model.layers):
+        logger.info(f"Layer {i}: {layer.name}, Type: {type(layer).__name__}, Output Shape: {layer.output_shape}, Trainable: {layer.trainable}")
+    logger.info(f"Total number of layers: {len(model.layers)}")
+    logger.info(f"Total trainable params: {sum([tf.keras.backend.count_params(w) for w in model.trainable_weights])}")
+    logger.info(f"Total non-trainable params: {sum([tf.keras.backend.count_params(w) for w in model.non_trainable_weights])}")
+
+class ProgressCallback(tf.keras.callbacks.Callback):
+    def on_epoch_begin(self, epoch, logs=None):
+        current_progress["epoch"] = epoch + 1
+        current_progress["status"] = f"Epoch {epoch+1}/{self.params['epochs']} 시작"
+        print(f"Epoch {epoch+1}/{self.params['epochs']} 시작 - 이전 결과: loss: {current_progress['loss']:.4f}, accuracy: {current_progress['accuracy']:.4f}, val_loss: {current_progress['val_loss']:.4f}, val_accuracy: {current_progress['val_accuracy']:.4f}")
+
+    def on_epoch_end(self, epoch, logs=None):
+        current_progress["epoch"] = epoch + 1
+        current_progress["loss"] = logs.get('loss', 0)
+        current_progress["accuracy"] = logs.get('accuracy', 0)
+        current_progress["val_loss"] = logs.get('val_loss', 0)
+        current_progress["val_accuracy"] = logs.get('val_accuracy', 0)
+        current_progress["status"] = f"Epoch {epoch+1}/{self.params['epochs']} 완료"
+        print(f"Epoch {epoch+1}/{self.params['epochs']} 완료 - loss: {logs['loss']:.4f}, accuracy: {logs['accuracy']:.4f}, val_loss: {logs['val_loss']:.4f}, val_accuracy: {logs['val_accuracy']:.4f}")
+
+def train_model(model, train_generator, val_generator, epochs, batch_size):
+    callback = ProgressCallback()
+    early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+    
+    history = model.fit(
+        train_generator,
+        validation_data=val_generator,
+        epochs=epochs,
+        batch_size=batch_size,
+        callbacks=[callback, early_stopping]
+    )
+    return history
+
+def is_image_file(filename: str) -> bool:
+    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp'}
+    return any(filename.lower().endswith(ext) for ext in image_extensions)
+
+
+def find_class_folders(path):
+    class_folders = []
+    for root, dirs, files in os.walk(path):
+        if any(file.lower().endswith('.wav') for file in files):
+            class_folders.append(root)
+    return class_folders
+
+import os
+import shutil
+import tempfile
+def fine_tune_process(zip_path, original_model_path, epochs, batch_size):
+    global current_progress, model
+    
+    temp_dir = None
+    try:
+        current_progress["total_epochs"] = epochs
+        
+        temp_dir = tempfile.mkdtemp(dir=app.config['UPLOAD_FOLDER'])
+        os.chmod(temp_dir, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+        logger.info(f"Created temporary directory: {temp_dir}")
+
+        extract_zip_safely(zip_path, temp_dir)
+        
+        # 'dd' 폴더가 있다면 그 안으로 이동
+        possible_dd_folder = os.path.join(temp_dir, 'dd')
+        if os.path.isdir(possible_dd_folder):
+            temp_dir = possible_dd_folder
+            logger.info(f"Found 'dd' folder, using it as the root: {temp_dir}")
+
+        train_generator, val_generator, class_names = prepare_data(temp_dir, batch_size=batch_size)
+        num_classes = len(class_names)
+        
+        log_original_model_structure(original_model_path)
+        model = fine_tune_model(original_model_path, num_classes)
+        log_model_structure(model)
+        
+        model.compile(optimizer=Adam(learning_rate=0.0001),
+                      loss='categorical_crossentropy',
+                      metrics=['accuracy'])
+        
+        history = train_model(model, train_generator, val_generator, epochs, batch_size)
+        
+        model_filename = f'finetuned_model_{datetime.now().strftime("%Y%m%d_%H%M%S")}.h5'
+        model_path = os.path.join(app.config['UPLOAD_FOLDER'], model_filename)
+        model.save(model_path)
+        
+        current_progress["status"] = "학습 완료"
+        current_progress["model_path"] = model_filename
+        current_progress["training_complete"] = True
+        logger.info("Training completed successfully:", current_progress)
+    except Exception as e:
+        error_message = str(e)
+        logger.error(f"Error in fine_tune_process: {error_message}", exc_info=True)
+        current_progress["status"] = f"학습 중 오류 발생: {error_message}"
+        current_progress["training_complete"] = True
+    finally:
+        if temp_dir and os.path.exists(temp_dir):
+            try:
+                shutil.rmtree(temp_dir)
+                logger.info(f"Removed temporary directory: {temp_dir}")
+            except Exception as e:
+                logger.error(f"Error removing temporary directory {temp_dir}: {str(e)}")
+                
 @app.route('/finetune-page')
 def finetune_page():
     return render_template('finetune.html')
@@ -932,26 +1018,13 @@ def finetune():
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
 
-            extract_path = os.path.join(app.config['UPLOAD_FOLDER'], 'extracted')
-
-            if os.path.exists(extract_path):
-                shutil.rmtree(extract_path)
-            os.makedirs(extract_path)
-
-            extract_zip_safely(file_path, extract_path)
-
-            logger.info(f"Extracted path: {extract_path}")
-
-            class_folders = [f for f in os.listdir(extract_path) if os.path.isdir(os.path.join(extract_path, f))]
-            if not class_folders:
-                return jsonify({'error': 'No class folders found after extraction'}), 400
-
             epochs = int(request.form.get('epochs', 20))
             batch_size = int(request.form.get('batchSize', 32))
 
             logger.info(f"Starting fine-tuning with epochs={epochs}, batch_size={batch_size}")
 
-            fine_tune_model(ORIGINAL_MODEL_PATH, extract_path, epochs, batch_size)
+            thread = threading.Thread(target=fine_tune_process, args=(file_path, ORIGINAL_MODEL_PATH, epochs, batch_size))
+            thread.start()
 
             return jsonify({
                 'status': 'training',
@@ -974,7 +1047,7 @@ def train_progress():
                 last_epoch = current_progress["epoch"]
             if current_progress["training_complete"]:
                 break
-            time.sleep(0.1)  # 더 빠른 업데이트를 위해 0.1초로 변경
+            time.sleep(0.1)
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 @app.route('/download-model/<filename>')
@@ -991,10 +1064,23 @@ def download_model(filename):
 def download_class_names(filename):
     return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename), as_attachment=True)
 
+import os
+import stat
+
+def setup_upload_folder(app):
+    upload_folder = app.config['UPLOAD_FOLDER']
+    if not os.path.exists(upload_folder):
+        os.makedirs(upload_folder)
+    
+    # 소유자에게 모든 권한, 그룹과 다른 사용자에게 읽기와 실행 권한 부여
+    os.chmod(upload_folder, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
+    
+    logger.info(f"Upload folder set up with appropriate permissions: {upload_folder}")
+
 if __name__ == '__main__':
     app.config['UPLOAD_FOLDER'] = 'uploads'
-    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER'])
+    setup_upload_folder(app)
+
     load_predictions_from_csv()
     load_adjustments_from_csv()
     socketio.run(app, debug=True)
