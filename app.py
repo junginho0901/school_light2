@@ -3,10 +3,11 @@ import io
 import csv
 from datetime import datetime, time, timedelta
 from collections import defaultdict
+import random
 import tempfile
 from typing import List
 import zipfile
-from flask import Flask, request, jsonify, render_template, send_file, Response, stream_with_context
+from flask import Flask, abort, request, jsonify, render_template, send_file, Response, stream_with_context
 from flask_socketio import SocketIO, emit
 import numpy as np
 import librosa
@@ -714,6 +715,22 @@ import shutil
 import logging
 
 logger = logging.getLogger(__name__)
+def process_audio(file_path, target_length=15, sr=22050, audio_dir=None):
+    y, _ = librosa.load(file_path, sr=sr, mono=True)
+    target_samples = target_length * sr
+    
+    if len(y) > target_samples:
+        y = y[:target_samples]
+    else:
+        while len(y) < target_samples:
+            random_file = random.choice(os.listdir(audio_dir))
+            random_file_path = os.path.join(audio_dir, random_file)
+            y_add, _ = librosa.load(random_file_path, sr=sr, mono=True)
+            y = np.concatenate([y, y_add])
+        y = y[:target_samples]
+    
+    y = y / np.max(np.abs(y))
+    return y
 
 def extract_zip_safely(zip_path, extract_to):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -760,25 +777,19 @@ def find_wav_files(path):
                 wav_files.append(os.path.join(root, file))
     return wav_files
 
-def create_spectrogram(y, sr, n_mels=128, fmax=8000):
-    # Melspectrogram 생성
-    S = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=n_mels, fmax=fmax)
+def create_spectrogram_1(y, sr):
+    plt.figure(figsize=(10, 4))
+    S = librosa.feature.melspectrogram(y=y, sr=sr)
     S_DB = librosa.power_to_db(S, ref=np.max)
-    
-    # 정규화
-    S_DB_normalized = (S_DB - S_DB.min()) / (S_DB.max() - S_DB.min())
-    
-    # 스펙트로그램을 이미지로 변환
-    plt.figure(figsize=(2, 2))
+    librosa.display.specshow(S_DB, sr=sr, x_axis='time', y_axis='mel')
     plt.axis('off')
-    librosa.display.specshow(S_DB_normalized, sr=sr, fmax=fmax)
+    plt.tight_layout(pad=0)
     buf = io.BytesIO()
     plt.savefig(buf, format='png', dpi=100, bbox_inches='tight', pad_inches=0)
+    plt.close()
     buf.seek(0)
     img = Image.open(buf)
     img_array = np.array(img.convert('RGB').resize((224, 224)))
-    plt.close()
-    
     return img_array
 
 
@@ -787,29 +798,20 @@ def process_wav_files(folder_path, target_length=15, sr=22050):
     labels = []
     class_names = []
 
-    wav_files = find_wav_files(folder_path)
-    logger.info(f"Found {len(wav_files)} WAV files")
-
-    if not wav_files:
-        raise ValueError("No WAV files found in the extracted directory")
-
-    for wav_file in wav_files:
-        class_name = os.path.basename(os.path.dirname(wav_file))
-        if class_name not in class_names:
+    for class_name in os.listdir(folder_path):
+        class_path = os.path.join(folder_path, class_name)
+        if os.path.isdir(class_path):
             class_names.append(class_name)
-        
-        try:
-            y, sr = librosa.load(wav_file, duration=target_length, sr=sr)
-            if len(y) < sr * target_length:
-                y = np.pad(y, (0, sr * target_length - len(y)))
-            spectrogram = create_spectrogram(y, sr)
-            spectrograms.append(spectrogram)
-            labels.append(class_names.index(class_name))
-        except Exception as e:
-            logger.error(f"Error processing file {wav_file}: {str(e)}")
-
-    logger.info(f"Processed {len(spectrograms)} spectrograms")
-    logger.info(f"Found {len(class_names)} classes: {class_names}")
+            for file_name in os.listdir(class_path):
+                if file_name.lower().endswith('.wav'):
+                    file_path = os.path.join(class_path, file_name)
+                    try:
+                        y = process_audio(file_path, target_length=target_length, sr=sr, audio_dir=class_path)
+                        spectrogram = create_spectrogram_1(y, sr)
+                        spectrograms.append(spectrogram)
+                        labels.append(class_names.index(class_name))
+                    except Exception as e:
+                        logger.error(f"Error processing file {file_path}: {str(e)}")
 
     return np.array(spectrograms), np.array(labels), class_names
 
@@ -823,47 +825,22 @@ def prepare_data(extract_path, target_size=(224, 224), batch_size=32):
     if len(spectrograms) == 0:
         raise ValueError("No valid WAV files found. Please check your data.")
 
-    num_classes = len(class_names)
-    logger.info(f"Number of classes detected: {num_classes}")
-    logger.info(f"Class names: {class_names}")
-
-    # 레이블을 원-핫 인코딩으로 변환
-    labels = to_categorical(labels, num_classes=num_classes)
-
-    # 데이터를 학습 세트와 검증 세트로 분할
-    indices = np.arange(spectrograms.shape[0])
-    np.random.shuffle(indices)
-    split = int(0.8 * len(indices))
-    train_indices, val_indices = indices[:split], indices[split:]
-
-    train_spectrograms, train_labels = spectrograms[train_indices], labels[train_indices]
-    val_spectrograms, val_labels = spectrograms[val_indices], labels[val_indices]
-
-    # ImageDataGenerator 사용
     train_datagen = ImageDataGenerator(
         rescale=1./255,
-        rotation_range=20,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
-        horizontal_flip=True
+        validation_split=0.2
     )
-
-    val_datagen = ImageDataGenerator(rescale=1./255)
-
+    
     train_generator = train_datagen.flow(
-        train_spectrograms, train_labels,
+        spectrograms, labels,
         batch_size=batch_size,
-        shuffle=True
+        subset='training'
     )
-
-    val_generator = val_datagen.flow(
-        val_spectrograms, val_labels,
+    
+    val_generator = train_datagen.flow(
+        spectrograms, labels,
         batch_size=batch_size,
-        shuffle=False
+        subset='validation'
     )
-
-    logger.info(f"Found {len(train_spectrograms)} training samples")
-    logger.info(f"Found {len(val_spectrograms)} validation samples")
 
     return train_generator, val_generator, class_names
 
@@ -873,21 +850,8 @@ from tensorflow.keras.layers import Dense, Flatten, Dropout
 
 
 def fine_tune_model(original_model_path, num_classes):
-    base_model = load_model(original_model_path)
-    
-    # 기존 모델의 출력 레이어를 제거
-    x = base_model.layers[-3].output  # dropout 레이어 이전까지
-    
-    # 새로운 출력 레이어 추가
-    x = Dropout(0.5)(x)  # dropout 비율은 원본 모델과 동일하게 유지
-    outputs = Dense(num_classes, activation='softmax', name='new_output')(x)
-    
-    model = tf.keras.Model(inputs=base_model.input, outputs=outputs)
-    
-    # 기존 레이어들을 고정 (선택적)
-    for layer in base_model.layers[:-3]:  # 마지막 Dense 레이어와 그 이전의 Dropout 레이어만 훈련 가능하도록 설정
-        layer.trainable = False
-    
+    model = load_model(original_model_path)
+    model.layers[-1] = tf.keras.layers.Dense(num_classes, activation='softmax', name='new_output')
     return model
 
 def log_original_model_structure(model_path):
@@ -921,15 +885,18 @@ class ProgressCallback(tf.keras.callbacks.Callback):
         print(f"Epoch {epoch+1}/{self.params['epochs']} 완료 - loss: {logs['loss']:.4f}, accuracy: {logs['accuracy']:.4f}, val_loss: {logs['val_loss']:.4f}, val_accuracy: {logs['val_accuracy']:.4f}")
 
 def train_model(model, train_generator, val_generator, epochs, batch_size):
-    callback = ProgressCallback()
+    print_callback = LambdaCallback(
+        on_epoch_begin=lambda epoch, logs: print(f'\nEpoch {epoch+1} 시작'),
+        on_epoch_end=lambda epoch, logs: print(f'Epoch {epoch+1} 종료 - loss: {logs["loss"]}, accuracy: {logs["accuracy"]}, val_loss: {logs["val_loss"]}, val_accuracy: {logs["val_accuracy"]}'),
+        on_batch_end=lambda batch, logs: print(f' - 배치 {batch+1}: loss: {logs["loss"]}, accuracy: {logs["accuracy"]}')
+    )
     early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
     
     history = model.fit(
         train_generator,
         validation_data=val_generator,
         epochs=epochs,
-        batch_size=batch_size,
-        callbacks=[callback, early_stopping]
+        callbacks=[print_callback, early_stopping]
     )
     return history
 
@@ -956,24 +923,12 @@ def fine_tune_process(zip_path, original_model_path, epochs, batch_size):
         current_progress["total_epochs"] = epochs
         
         temp_dir = tempfile.mkdtemp(dir=app.config['UPLOAD_FOLDER'])
-        os.chmod(temp_dir, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-        logger.info(f"Created temporary directory: {temp_dir}")
-
         extract_zip_safely(zip_path, temp_dir)
         
-        # 'dd' 폴더가 있다면 그 안으로 이동
-        possible_dd_folder = os.path.join(temp_dir, 'dd')
-        if os.path.isdir(possible_dd_folder):
-            temp_dir = possible_dd_folder
-            logger.info(f"Found 'dd' folder, using it as the root: {temp_dir}")
-
         train_generator, val_generator, class_names = prepare_data(temp_dir, batch_size=batch_size)
         num_classes = len(class_names)
         
-        log_original_model_structure(original_model_path)
         model = fine_tune_model(original_model_path, num_classes)
-        log_model_structure(model)
-        
         model.compile(optimizer=Adam(learning_rate=0.0001),
                       loss='categorical_crossentropy',
                       metrics=['accuracy'])
@@ -995,12 +950,8 @@ def fine_tune_process(zip_path, original_model_path, epochs, batch_size):
         current_progress["training_complete"] = True
     finally:
         if temp_dir and os.path.exists(temp_dir):
-            try:
-                shutil.rmtree(temp_dir)
-                logger.info(f"Removed temporary directory: {temp_dir}")
-            except Exception as e:
-                logger.error(f"Error removing temporary directory {temp_dir}: {str(e)}")
-                
+            shutil.rmtree(temp_dir)
+
 @app.route('/finetune-page')
 def finetune_page():
     return render_template('finetune.html')
