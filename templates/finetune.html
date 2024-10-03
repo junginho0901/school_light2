@@ -33,12 +33,10 @@
         nav a {
             text-decoration: none;
             color: #007bff;
-            font-weight: bold;
+            text-decoration: none;
+
         }
 
-        nav a:hover {
-            text-decoration: underline;
-        }
 
         #dropArea {
             border: 2px dashed #ccc;
@@ -66,7 +64,7 @@
         }
 
         .button:hover {
-            background: #0056b3;
+            background: #007bff;
         }
 
         #fileInfo {
@@ -103,10 +101,12 @@
             color: white;
             text-decoration: none;
             border-radius: 5px;
+            transition: background-color 0.3s ease;
+
         }
 
         .btn:hover {
-            background: #218838;
+            background-color: #007bff;
         }
 
         #logs {
@@ -117,6 +117,34 @@
             overflow-y: auto;
             white-space: pre-wrap;
         }
+
+
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #28a745;
+            /* 파란색 배경 */
+            color: white;
+            /* 흰색 텍스트 */
+            text-decoration: none;
+            /* 링크 밑줄 제거 */
+            border-radius: 5px;
+            /* 모서리를 둥글게 */
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            /* 호버 시 부드러운 전환 효과 */
+        }
+
+        .back-button:hover {
+            background-color: #007bff;
+            /* 호버 시 더 어두운 파란색 */
+        }
+
+        .back-button::before {
+
+            /* 버튼 앞에 화살표 추가 */
+            font-size: 18px;
+        }
     </style>
 </head>
 
@@ -125,7 +153,7 @@
         <header>
             <h1>모델 파인튜닝</h1>
             <nav>
-                <a href="{{ url_for('index') }}" class="nav-button">← 메인 페이지로 돌아가기</a>
+                <a href="{{ url_for('index') }}" class="back-button">← 메인 페이지로 돌아가기</a>
             </nav>
         </header>
         <main>
