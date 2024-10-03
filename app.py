@@ -731,19 +731,15 @@ def process_audio(file_path, target_length=15, sr=22050, audio_dir=None):
     
     y = y / np.max(np.abs(y))
     return y
-
 def extract_zip_safely(zip_path, extract_to):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         for file in zip_ref.namelist():
             try:
-                # CP437 인코딩을 사용하여 파일명 디코딩 시도
                 decoded_filename = file.encode('cp437').decode('euc-kr')
             except UnicodeDecodeError:
-                # 실패 시 UTF-8로 디코딩 시도
                 try:
                     decoded_filename = file.encode('cp437').decode('utf-8')
                 except UnicodeDecodeError:
-                    # 모든 디코딩 실패 시 원래 파일명 사용
                     decoded_filename = file
                     logger.warning(f"Failed to decode filename: {file}, using original name")
 
@@ -752,14 +748,13 @@ def extract_zip_safely(zip_path, extract_to):
             if file.endswith('/'):
                 os.makedirs(target_path, exist_ok=True)
             else:
-                # 디렉토리 생성
                 os.makedirs(os.path.dirname(target_path), exist_ok=True)
-                # 파일 추출
                 with zip_ref.open(file) as source, open(target_path, "wb") as target:
                     shutil.copyfileobj(source, target)
 
     logger.info(f"Zip file extracted to {extract_to}")
-    log_directory_structure(extract_to)
+    logger.info(f"Extracted contents: {os.listdir(extract_to)}")
+
 
 def log_directory_structure(path, level=0):
     for item in os.listdir(path):
@@ -769,9 +764,9 @@ def log_directory_structure(path, level=0):
             log_directory_structure(item_path, level + 1)
 
 
-def find_wav_files(path):
+def find_wav_files(folder_path):
     wav_files = []
-    for root, dirs, files in os.walk(path):
+    for root, dirs, files in os.walk(folder_path):
         for file in files:
             if file.lower().endswith('.wav'):
                 wav_files.append(os.path.join(root, file))
@@ -798,52 +793,79 @@ def process_wav_files(folder_path, target_length=15, sr=22050):
     labels = []
     class_names = []
 
-    for class_name in os.listdir(folder_path):
-        class_path = os.path.join(folder_path, class_name)
-        if os.path.isdir(class_path):
+    wav_files = find_wav_files(folder_path)
+    logger.info(f"Found {len(wav_files)} WAV files")
+
+    if not wav_files:
+        raise ValueError(f"No WAV files found in {folder_path}. Directory contents: {os.listdir(folder_path)}")
+
+    for wav_file in wav_files:
+        class_name = os.path.basename(os.path.dirname(wav_file))
+        if class_name not in class_names:
             class_names.append(class_name)
-            for file_name in os.listdir(class_path):
-                if file_name.lower().endswith('.wav'):
-                    file_path = os.path.join(class_path, file_name)
-                    try:
-                        y = process_audio(file_path, target_length=target_length, sr=sr, audio_dir=class_path)
-                        spectrogram = create_spectrogram_1(y, sr)
-                        spectrograms.append(spectrogram)
-                        labels.append(class_names.index(class_name))
-                    except Exception as e:
-                        logger.error(f"Error processing file {file_path}: {str(e)}")
+        
+        try:
+            y = process_audio(wav_file, target_length=target_length, sr=sr, audio_dir=os.path.dirname(wav_file))
+            spectrogram = create_spectrogram_1(y, sr)
+            spectrograms.append(spectrogram)
+            labels.append(class_names.index(class_name))
+        except Exception as e:
+            logger.error(f"Error processing file {wav_file}: {str(e)}")
+
+    if not spectrograms:
+        raise ValueError(f"No spectrograms created. Check if WAV files are valid.")
+
+    logger.info(f"Processed {len(spectrograms)} spectrograms")
+    logger.info(f"Found {len(class_names)} classes: {class_names}")
 
     return np.array(spectrograms), np.array(labels), class_names
+
 
 import numpy as np
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-def prepare_data(extract_path, target_size=(224, 224), batch_size=32):
-    spectrograms, labels, class_names = process_wav_files(extract_path)
-    
-    if len(spectrograms) == 0:
-        raise ValueError("No valid WAV files found. Please check your data.")
 
-    train_datagen = ImageDataGenerator(
-        rescale=1./255,
-        validation_split=0.2
-    )
-    
-    train_generator = train_datagen.flow(
-        spectrograms, labels,
-        batch_size=batch_size,
-        subset='training'
-    )
-    
-    val_generator = train_datagen.flow(
-        spectrograms, labels,
-        batch_size=batch_size,
-        subset='validation'
-    )
+def prepare_data(extract_path, target_size=(224, 224), batch_size=32, validation_split=0.2):
+    try:
+        spectrograms, labels, class_names = process_wav_files(extract_path)
+        
+        if len(spectrograms) == 0:
+            raise ValueError("No valid spectrograms created. Please check your WAV files.")
 
-    return train_generator, val_generator, class_names
+        # Convert labels to categorical
+        labels_categorical = to_categorical(labels)
 
+        # Shuffle and split the data
+        X_train, X_val, y_train, y_val = train_test_split(
+            spectrograms, labels_categorical, 
+            test_size=validation_split, 
+            stratify=labels_categorical,
+            random_state=42
+        )
+
+        train_datagen = ImageDataGenerator(rescale=1./255)
+        val_datagen = ImageDataGenerator(rescale=1./255)
+        
+        train_generator = train_datagen.flow(
+            X_train, y_train,
+            batch_size=batch_size
+        )
+        
+        val_generator = val_datagen.flow(
+            X_val, y_val,
+            batch_size=batch_size
+        )
+
+        logger.info(f"Data preparation completed. Train samples: {len(X_train)}, Validation samples: {len(X_val)}")
+
+        return train_generator, val_generator, class_names
+    except Exception as e:
+        logger.error(f"Error in prepare_data: {str(e)}")
+        raise
+
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.utils import to_categorical
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 from tensorflow.keras.layers import Dense, Flatten, Dropout
@@ -860,6 +882,11 @@ def log_original_model_structure(model_path):
     original_model.summary(print_fn=lambda x: logger.info(x))
 
 
+def log_zip_structure(zip_path):
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        logger.info("ZIP file structure:")
+        for file in zip_ref.namelist():
+            logger.info(f"  {file}")
 
 def log_model_structure(model):
     logger.info("Model structure:")
@@ -884,12 +911,21 @@ class ProgressCallback(tf.keras.callbacks.Callback):
         current_progress["status"] = f"Epoch {epoch+1}/{self.params['epochs']} 완료"
         print(f"Epoch {epoch+1}/{self.params['epochs']} 완료 - loss: {logs['loss']:.4f}, accuracy: {logs['accuracy']:.4f}, val_loss: {logs['val_loss']:.4f}, val_accuracy: {logs['val_accuracy']:.4f}")
 
+from tensorflow.keras.callbacks import Callback, EarlyStopping
+
+class PrintCallback(Callback):
+    def on_epoch_begin(self, epoch, logs=None):
+        print(f'\nEpoch {epoch+1} 시작')
+    
+    def on_epoch_end(self, epoch, logs=None):
+        print(f'Epoch {epoch+1} 종료 - loss: {logs["loss"]:.4f}, accuracy: {logs["accuracy"]:.4f}, val_loss: {logs["val_loss"]:.4f}, val_accuracy: {logs["val_accuracy"]:.4f}')
+    
+    def on_batch_end(self, batch, logs=None):
+        if batch % 100 == 0:  # 100 배치마다 한 번씩 출력
+            print(f' - 배치 {batch+1}: loss: {logs["loss"]:.4f}, accuracy: {logs["accuracy"]:.4f}')
+
 def train_model(model, train_generator, val_generator, epochs, batch_size):
-    print_callback = LambdaCallback(
-        on_epoch_begin=lambda epoch, logs: print(f'\nEpoch {epoch+1} 시작'),
-        on_epoch_end=lambda epoch, logs: print(f'Epoch {epoch+1} 종료 - loss: {logs["loss"]}, accuracy: {logs["accuracy"]}, val_loss: {logs["val_loss"]}, val_accuracy: {logs["val_accuracy"]}'),
-        on_batch_end=lambda batch, logs: print(f' - 배치 {batch+1}: loss: {logs["loss"]}, accuracy: {logs["accuracy"]}')
-    )
+    print_callback = PrintCallback()
     early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
     
     history = model.fit(
@@ -899,6 +935,8 @@ def train_model(model, train_generator, val_generator, epochs, batch_size):
         callbacks=[print_callback, early_stopping]
     )
     return history
+
+
 
 def is_image_file(filename: str) -> bool:
     image_extensions = {'.jpg', '.jpeg', '.png', '.bmp'}
@@ -923,8 +961,13 @@ def fine_tune_process(zip_path, original_model_path, epochs, batch_size):
         current_progress["total_epochs"] = epochs
         
         temp_dir = tempfile.mkdtemp(dir=app.config['UPLOAD_FOLDER'])
+        logger.info(f"Created temporary directory: {temp_dir}")
+
+        log_zip_structure(zip_path)
         extract_zip_safely(zip_path, temp_dir)
         
+        logger.info(f"Extracted contents: {os.listdir(temp_dir)}")
+
         train_generator, val_generator, class_names = prepare_data(temp_dir, batch_size=batch_size)
         num_classes = len(class_names)
         
@@ -951,6 +994,7 @@ def fine_tune_process(zip_path, original_model_path, epochs, batch_size):
     finally:
         if temp_dir and os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
+            logger.info(f"Removed temporary directory: {temp_dir}")
 
 @app.route('/finetune-page')
 def finetune_page():
