@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -10,24 +9,19 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-<!-- MediaElement.js 라이브러리 추가 -->
-  <!-- Socket.IO 클라이언트 라이브러리 추가 -->
-<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-
-<!-- MediaElement.js 라이브러리 추가 -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mediaelement/4.2.16/mediaelement-and-player.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mediaelement/4.2.16/mediaelementplayer.min.css" />
-
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mediaelement/4.2.16/mediaelement-and-player.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mediaelement/4.2.16/mediaelementplayer.min.css" />
 </head>
 <body>
     <div class="container">
         <header>
             <h1>보행자 신호등 & 오디오 분류기 시스템</h1>
             <nav>
-                <a href="{{ url_for('data_management') }}" class="nav-button">데이터 관리</a>
-                <button id="dashboardButton" class="nav-button">대시보드 보기</button>
-                <a href="{{ url_for('forecast_page') }}" class="nav-button">ARIMA 예측</a>
-                <a href="{{ url_for('finetune_page') }}" class="nav-button">모델 파인튜닝</a>
+                <a href="{{ url_for('data_management') }}" class="nav-button btn">데이터 관리</a>
+                <button id="dashboardButton" class="nav-button btn">대시보드 보기</button>
+                <a href="{{ url_for('forecast_page') }}" class="nav-button btn">ARIMA 예측</a>
+                <a href="{{ url_for('finetune_page') }}" class="nav-button btn">모델 파인튜닝</a>
             </nav>
         </header>
         <main>
@@ -39,8 +33,8 @@
                 <div class="timer"></div>
             </div>
             <div class="control-panel">
-                <button id="recordButton">실시간 판단 시작</button>
-                <h2>---------------------------------------------------------------------------</h2>
+                <button id="recordButton" class="btn">실시간 판단 시작</button>
+                <div class="horizontal-line"></div>
                 <h1>자동 제어 설정</h1>
 
                 <div class="time-period-container">
@@ -50,7 +44,7 @@
                             <input type="time" id="startTime1" name="startTime">
                             <label for="endTime1">종료 시간:</label>
                             <input type="time" id="endTime1" name="endTime">
-                            <button class="remove-time-btn">삭제</button>
+                            <button class="remove-time-btn btn">삭제</button>
                         </div>
                     </div>
                 
@@ -64,13 +58,13 @@
                     <div class="weekday-control">
                         <span id="weekdayLabel">자동 제어 중지 날짜:</span>
                         <div id="weekdayButtons" aria-labelledby="weekdayLabel">
-                            <button class="weekday-btn" data-weekday="1">월</button>
-                            <button class="weekday-btn" data-weekday="2">화</button>
-                            <button class="weekday-btn" data-weekday="3">수</button>
-                            <button class="weekday-btn" data-weekday="4">목</button>
-                            <button class="weekday-btn" data-weekday="5">금</button>
-                            <button class="weekday-btn" data-weekday="6">토</button>
-                            <button class="weekday-btn" data-weekday="0">일</button>
+                            <button class="weekday-btn btn" data-weekday="1">월</button>
+                            <button class="weekday-btn btn" data-weekday="2">화</button>
+                            <button class="weekday-btn btn" data-weekday="3">수</button>
+                            <button class="weekday-btn btn" data-weekday="4">목</button>
+                            <button class="weekday-btn btn" data-weekday="5">금</button>
+                            <button class="weekday-btn btn" data-weekday="6">토</button>
+                            <button class="weekday-btn btn" data-weekday="0">일</button>
                         </div>
                     </div>
                     

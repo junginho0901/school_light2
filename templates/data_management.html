@@ -1,210 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>데이터 관리</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
-
-        .container {
-            position: relative;
-            /* 컨테이너를 기준으로 위치를 고정할 수 있게 만듦 */
-
-            max-width: 1800px;
-            margin: auto;
-            background: white;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-            color: #333;
-            text-align: center;
-        }
-
-        nav {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        nav a {
-            margin: 0 10px;
-            text-decoration: none;
-            color: #333;
-            font-weight: bold;
-        }
-
-        table {
-            table-layout: auto;
-            /* 자동 레이아웃을 적용하여 셀이 콘텐츠에 맞게 조정되도록 함 */
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        td {
-            text-align: center;
-            /* 좌우 가운데 정렬 */
-            vertical-align: middle;
-            /* 필요하면 세로 가운데 정렬도 추가 가능 */
-        }
-
-        th,
-        td {
-
-            padding: 5px;
-            text-align: center;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-        }
-
-        tr:hover {
-            background-color: #f5f5f5;
-        }
-
-        img {
-            max-width: 110px;
-            max-height: 110px;
-            cursor: pointer;
-        }
-
-        .spectrogram-image {
-            max-width: 100px;
-            max-height: 100px;
-            margin-left: 10px;
-            /* Adds spacing between the audio player and the image */
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.9);
-        }
-
-        .modal-content {
-            margin: auto;
-            display: block;
-            width: 80%;
-            max-width: 700px;
-        }
-
-        .close {
-            position: absolute;
-            top: 15px;
-            right: 35px;
-            color: #f1f1f1;
-            font-size: 40px;
-            font-weight: bold;
-            transition: 0.3s;
-        }
-
-        .close:hover,
-        .close:focus {
-            color: #bbb;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            font-size: 16px;
-            text-align: center;
-            cursor: pointer;
-            text-decoration: none;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-
-        /* 전체 폴더 다운로드 버튼 */
-        .full-download-btn {
-            display: block;
-            /* 블록 요소로 설정하여 너비가 전체로 적용 */
-            width: 100%;
-            max-width: 600px;
-            margin: 0 auto 10px;
-            /* 중앙 정렬과 아래 마진 추가 */
-        }
-
-        /* 버튼 그룹(드롭다운과 클래스 다운로드 버튼) */
-        .button-group {
-            display: flex;
-            justify-content: space-between;
-            /* 버튼 사이에 간격 분배 */
-            align-items: center;
-            width: 100%;
-            max-width: 600px;
-            margin: 0 auto;
-            /* 부모 요소 기준으로 가운데 정렬 */
-        }
-
-        /* 버튼과 드롭다운의 크기 조정 */
-        .button-group select,
-        .button-group button {
-            flex: 1;
-            /* 버튼과 드롭다운이 같은 비율로 공간 차지 */
-            margin-right: 10px;
-            /* 버튼과 드롭다운 사이의 간격 */
-        }
-
-        .button-group button:last-child {
-            margin-right: 0;
-            /* 마지막 버튼의 오른쪽 마진 제거 */
-        }
-
-
-        .play-pause:hover,
-        .volume-button:hover {
-            color: inherit;
-            /* hover 시 색이 변하지 않도록 원래 색상 유지 */
-            background: none;
-            /* 배경 색도 변하지 않도록 함 */
-            cursor: pointer;
-            /* 마우스 커서는 여전히 포인터로 유지 */
-        }
-
-        .btn-primary {
-            background-color: #007bff;
-            color: white;
-        }
-
-        .btn-success {
-            background-color: #28a745;
-            color: white;
-        }
-
-        .btn-secondary {
-            background-color: #6c757d;
-            color: white;
-        }
-
-        .dropdown {
-            margin-bottom: 20px;
-        }
-
-        .audio-player {
+<style>
+    
+            .audio-player {
             border: 1px solid #ccc;
             /* 회색 테두리 적용 */
             border-radius: 5px;
@@ -284,83 +82,26 @@
             margin: 0;
         }
 
-        .download-btn {
-            display: inline-block;
-            /* 버튼을 인라인 블록으로 설정 */
-            justify-content: center;
-            align-items: center;
-            width: 20px;
-            height: 20px;
-            background: none;
-            border: none;
-            font-size: 18px;
-            color: #5f6368;
-            margin: 0 auto;
-            /* 좌우 중앙 정렬 */
-            padding: 0;
-            cursor: pointer;
-        }
-
-        .download-btn img {
-            width: 100%;
-            /* 이미지가 버튼 안에 맞도록 */
-            height: auto;
-            /* 이미지 비율 유지 */
-        }
-
-        .back-button-container {
-            position: absolute;
-            /* 컨테이너 내부에서 절대 위치 */
-            top: 10px;
-            /* 컨테이너 상단에서 10px 떨어짐 */
-            left: 10px;
-            /* 컨테이너 왼쪽에서 10px 떨어짐 */
-        }
-
-        .back-button {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #007bff;
-            /* 파란색 배경 */
-            color: white;
-            /* 흰색 텍스트 */
-            text-decoration: none;
-            /* 링크 밑줄 제거 */
-            border-radius: 5px;
-            /* 모서리를 둥글게 */
-            font-size: 16px;
-            /* 글자 크기 */
-            font-weight: bold;
-            /* 글자 굵게 */
-            transition: background-color 0.3s ease;
-            /* 호버 시 부드러운 전환 효과 */
-        }
-
-        .back-button:hover {
-            background-color: #0056b3;
-            /* 호버 시 더 어두운 파란색 */
-        }
-
-        .back-button::before {
-
-            /* 버튼 앞에 화살표 추가 */
-            font-size: 18px;
-        }
-    </style>
+</style>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>데이터 관리</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css">
 </head>
 
 <body>
     <div class="container">
         <h1>고신뢰도 데이터 관리</h1>
         <nav class="back-button-container">
-            <a href="{{ url_for('index') }}" class="back-button">← 메인 페이지로 돌아가기</a>
+            <a href="{{ url_for('index') }}" class="back-button btn">← 메인 페이지로 돌아가기</a>
         </nav>
 
-
-        <!-- 전체 폴더 다운로드 버튼 -->
         <button onclick="downloadAllFolder()" class="btn btn-success full-download-btn">전체 폴더 다운로드</button>
 
-        <!-- 드롭다운과 선택한 클래스 폴더 다운로드 버튼 -->
         <div class="dropdown button-group">
             <select id="classDropdown" class="btn btn-secondary">
                 <option value="기차">기차</option>
@@ -376,7 +117,6 @@
             </select>
             <button id="downloadClassFolder" class="btn btn-secondary">선택한 클래스 폴더 다운로드</button>
         </div>
-
 
         <table id="data-table">
             <thead>
@@ -401,12 +141,12 @@
                     <td>{{ item.timestamp }}</td>
                     <td>
                         <div class="audio-player" data-audio-src="{{ item.audio_path }}">
-                            <button class="play-pause">▶</button>
+                            <button class="play-pause btn">▶</button>
                             <span class="time current-time">0:00</span>
                             <input type="range" class="seek-bar" value="0" min="0" max="100">
                             <span class="time duration">0:00</span>
                             <div class="volume-container">
-                                <button class="volume-button">🔊</button>
+                                <button class="volume-button btn">🔊</button>
                                 <input type="range" class="volume-slider" min="0" max="100" value="100">
                             </div>
                         </div>
@@ -419,7 +159,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        <button class="download-btn" data-filename="{{ item.file_name }}"
+                        <button class="download-btn btn" data-filename="{{ item.file_name }}"
                             data-class="{{ item.class }}">⬇️</button>
                     </td>
                 </tr>
@@ -433,7 +173,6 @@
         <img class="modal-content" id="modalImage" style="width: auto; height: auto;">
         <div id="caption"></div>
     </div>
-
     <script>
         $(document).ready(function () {
 

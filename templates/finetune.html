@@ -1,159 +1,17 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>모델 파인튜닝</title>
-    <style>
-        /* 기본 스타일 */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f9;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        header {
-            text-align: center;
-            padding: 20px 0;
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        nav a {
-            text-decoration: none;
-            color: #007bff;
-            text-decoration: none;
-
-        }
-
-
-        #dropArea {
-            border: 2px dashed #ccc;
-            border-radius: 20px;
-            width: 480px;
-            font-family: sans-serif;
-            margin: 50px auto;
-            padding: 20px;
-            text-align: center;
-            background-color: #fff;
-        }
-
-        #dropArea.highlight {
-            border-color: purple;
-        }
-
-        .button {
-            display: inline-block;
-            padding: 10px;
-            background: #007bff;
-            color: white;
-            cursor: pointer;
-            border-radius: 5px;
-            border: 1px solid #007bff;
-        }
-
-        .button:hover {
-            background: #007bff;
-        }
-
-        #fileInfo {
-            margin: 15px 0;
-        }
-
-        .form-group {
-            margin: 15px 0;
-        }
-
-        .form-group label {
-            font-weight: bold;
-            display: block;
-        }
-
-        #progress {
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        #progressBar {
-            width: 100%;
-        }
-
-        #result {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 10px;
-            background: #28a745;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-
-        }
-
-        .btn:hover {
-            background-color: #007bff;
-        }
-
-        #logs {
-            margin-top: 20px;
-            background-color: #eaeaea;
-            padding: 10px;
-            max-height: 300px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-
-
-        .back-button {
-            display: inline-block;
-            padding: 10px 20px;
-            background: #28a745;
-            /* 파란색 배경 */
-            color: white;
-            /* 흰색 텍스트 */
-            text-decoration: none;
-            /* 링크 밑줄 제거 */
-            border-radius: 5px;
-            /* 모서리를 둥글게 */
-            font-size: 16px;
-            transition: background-color 0.3s ease;
-            /* 호버 시 부드러운 전환 효과 */
-        }
-
-        .back-button:hover {
-            background-color: #007bff;
-            /* 호버 시 더 어두운 파란색 */
-        }
-
-        .back-button::before {
-
-            /* 버튼 앞에 화살표 추가 */
-            font-size: 18px;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
-
 <body>
     <div class="container">
         <header>
             <h1>모델 파인튜닝</h1>
             <nav>
-                <a href="{{ url_for('index') }}" class="back-button">← 메인 페이지로 돌아가기</a>
+                <a href="{{ url_for('index') }}" class="back-button btn">← 메인 페이지로 돌아가기</a>
             </nav>
         </header>
         <main>
@@ -164,7 +22,7 @@
 
                     <input type="file" id="fileElem" name="dataFolder" accept=".zip" onchange="handleFiles(this.files)"
                         hidden>
-                    <label class="button" for="fileElem">파일 선택</label>
+                    <label class="button btn" for="fileElem">파일 선택</label>
                 </form>
                 <div id="fileInfo"></div>
                 <div class="form-group">
@@ -196,7 +54,6 @@
             </div>
         </main>
     </div>
-
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         let dropArea = document.getElementById('dropArea');

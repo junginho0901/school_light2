@@ -1,12 +1,31 @@
+@import url(https://fonts.googleapis.com/css?family=Josefin+Slab:100,300,400,600,700);
+/* Google Fonts에서 Hanna 폰트 import */
+@import url('https://fonts.googleapis.com/css2?family=Hana&display=swap');
+
+
+/* 기본 폰트 설정 */
+body, button, input, select, textarea {
+    font-family: 'Hana', 'Arial', sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #333;
+}
+
+/* 헤더 폰트 설정 */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Hana', 'Arial', sans-serif;
+    font-weight: 700;
+}
+
+/* 기존의 다른 스타일들 */
 body {
-    font-family: Arial, sans-serif;
+    background: #f4f4f9;
     margin: 0;
     padding: 0;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    background-color: #f0f0f0;
+    min-height: 100vh;
 }
 
 .container {
@@ -15,16 +34,21 @@ body {
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     text-align: center;
+    max-width: 1800px;
+    width: 95%;
 }
+
+
 
 header {
     margin-bottom: 20px;
 }
 
-h1 {
+h1, h2, h3 {
     color: #333;
 }
 
+/* Traffic Light Styles */
 .traffic-light-container {
     margin-bottom: 20px;
 }
@@ -62,25 +86,112 @@ h1 {
     margin-top: 10px;
 }
 
-button {
-    background-color: #4CAF50;
-    border: none;
-    color: white;
-    padding: 15px 32px;
+.btn, .nav-button, #recordButton, .weekday-btn, #resetButton, #startFineTuning, .download-btn,
+.btn-primary, .btn-secondary, .btn-success, .btn-danger, .back-button, #dashboardButton,
+button[id$="Button"] { /* id가 'Button'으로 끝나는 모든 버튼 */
+    display: inline-block;
+    position: relative;
+    padding: 10px 20px;
+    margin: 10px 5px;  /* 좌우 마진 줄임 */
+    font-weight: 600;
     text-align: center;
     text-decoration: none;
-    display: inline-block;
-    font-size: 16px;
-    margin: 4px 2px;
+    color: #FFF;
+    border-radius: 5px;
+    transition: all 0.2s ease;
+    border: none;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transform: translateY(-5px);
+    box-shadow: 0 5px 0 0 rgba(0,0,0,0.25);
+    font-size: 16px;
+    line-height: 1.5;
+    min-width: 50px;  /* 최소 너비 설정 */
+    max-width: 300px;  /* 최대 너비 설정 */
+    width: auto;  /* 내용에 따라 자동으로 너비 조정 */
 }
 
-button:hover {
-    background-color: #45a049;
+/* 버튼 색상 */
+.btn, .nav-button, #recordButton, .btn-success, #dashboardButton { background-color: #4CAF50; }
+.weekday-btn, .btn-primary { background-color: #2196F3; }
+#resetButton, .btn-danger { background-color: #f44336; }
+#startFineTuning { background-color: #9C27B0; }
+.download-btn, .btn-secondary { background-color: #FF9800; }
+.back-button { background-color: #007bff; }
+
+/* 호버 효과 */
+.btn:hover, .nav-button:hover, #recordButton:hover, .weekday-btn:hover, 
+#resetButton:hover, #startFineTuning:hover, .download-btn:hover,
+.btn-primary:hover, .btn-secondary:hover, .btn-success:hover, .btn-danger:hover,
+.back-button:hover, #dashboardButton:hover,
+button[id$="Button"]:hover {
+    transform: translateY(0);
+    box-shadow: 0 2px 0 0 rgba(0,0,0,0.25);
 }
 
+/* 호버 시 색상 변경 */
+.btn:hover, .nav-button:hover, #recordButton:hover, .btn-success:hover, #dashboardButton:hover { background-color: #45a049; }
+.weekday-btn:hover, .btn-primary:hover { background-color: #1976D2; }
+#resetButton:hover, .btn-danger:hover { background-color: #d32f2f; }
+#startFineTuning:hover { background-color: #7B1FA2; }
+.download-btn:hover, .btn-secondary:hover { background-color: #F57C00; }
+.back-button:hover { background-color: #0056b3; }
 
+/* 네비게이션 버튼 컨테이너 스타일 */
+nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* 네비게이션 버튼 공통 스타일 */
+nav .btn, nav .nav-button, nav #dashboardButton {
+    flex: 1 1 0;
+    min-width: 150px; /* 최소 너비 설정 */
+    max-width: 200px; /* 최대 너비 설정 */
+    width: calc(25% - 10px); /* 4개의 버튼이 한 줄에 들어가도록 설정 */
+    white-space: normal; /* 긴 텍스트의 경우 줄바꿈 허용 */
+    height: auto; /* 높이 자동 조절 */
+    padding: 10px 5px; /* 상하 패딩은 유지, 좌우 패딩 줄임 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+/* 버튼 내부 텍스트 스타일 */
+nav .btn span, nav .nav-button span, nav #dashboardButton span {
+    display: inline-block;
+    word-wrap: break-word;
+    max-width: 100%;
+}
+
+/* 반응형 디자인을 위한 미디어 쿼리 */
+@media (max-width: 768px) {
+    nav .btn, nav .nav-button, nav #dashboardButton {
+        width: calc(50% - 10px); /* 2개의 버튼이 한 줄에 들어가도록 설정 */
+    }
+}
+
+@media (max-width: 480px) {
+    nav .btn, nav .nav-button, nav #dashboardButton {
+        width: 100%; /* 모바일에서는 한 줄에 하나의 버튼만 */
+    }
+}
+
+/* ... (나머지 스타일 유지) ... */
+
+.btn:disabled, .weekday-btn.disabled, 
+.btn-primary:disabled, .btn-secondary:disabled, .btn-success:disabled, .btn-danger:disabled {
+    background-color: #ccc;
+    color: #666;
+    transform: translateY(0);
+    box-shadow: 0 2px 0 0 rgba(0,0,0,0.1);
+    cursor: not-allowed;
+}
+
+/* Results Panel */
 .results-panel {
     margin-top: 20px;
     text-align: left;
@@ -95,10 +206,22 @@ button:hover {
     font-size: 14px;
 }
 
+/* Modal Styles */
+.modal, .modal_dash {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.9);
+}
 
-.modal-content_dash {
-    background-color: #ffffff; /* 흰색 배경 */
-    color: #333333; /* 어두운 텍스트 색상 */
+.modal-content, .modal-content_dash {
+    background-color: #ffffff;
+    color: #333333;
     margin: 15% auto;
     padding: 20px;
     border: 1px solid #888;
@@ -107,87 +230,37 @@ button:hover {
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
-.modal_dash {
-    display: none; /* 기본적으로 숨김 */
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.4);
-}
-
-/* 차트 영역 스타일 */
-.chart-item {
-    background-color: #f8f9fa; /* 연한 회색 배경 */
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-}
-
-/* 차트 제목 스타일 */
-.chart-item h3 {
-    color: #333333;
-    margin-top: 0;
-}
-
-/* 모달 닫기 버튼 스타일 */
 .close {
     color: #aaaaaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 .close:hover,
 .close:focus {
     color: #000000;
     text-decoration: none;
-    cursor: pointer;
 }
 
-/* 버튼 스타일 */
-.btn {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.btn:hover {
-    background-color: #0056b3;
-}
-
-
+/* Chart Styles */
 .charts-container {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-around;
-    
 }
 
 .chart-item {
-    width: 45%;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
     margin-bottom: 20px;
+    width: 45%;
     height: 400px;
 }
 
-@media (max-width: 768px) {
-    .chart-item {
-        width: 100%;
-    }
-}
-
-#resetButton {
-    background-color: #f44336;
-    margin-top: 20px;
-}
-
-#resetButton:hover {
-    background-color: #d32f2f;
-}
-
+/* Notification Styles */
 .notification-container {
     position: fixed;
     top: 20px;
@@ -205,60 +278,7 @@ button:hover {
     opacity: 0.9;
 }
 
-
-.nav-button {
-    display: inline-block;
-    padding: 10px 20px;
-    margin: 10px;
-    background-color: #4CAF50;
-    color: white;
-    text-decoration: none;
-    border: none;
-    border-radius: 5px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-#recordButton {
-    border-radius: 5px;
-}
-.weekday-btn {
-    border-radius: 5px;
-    padding: 10px 20px;
-    background-color: #4CAF50; /* 배경색 */
-    color: white; /* 텍스트 색상 */
-    border: none; /* 테두리 제거 */
-    cursor: pointer;
-    margin: 5px; /* 버튼 간 간격 */
-    transition: background-color 0.3s; /* 호버 애니메이션 */
-}
-
-.weekday-btn:hover {
-    background-color: #007bff;  /* 마우스를 올리면 파란색으로 변환 */
-}
-
-.weekday-btn.disabled {
-    background-color: #ccc; /* 비활성화 시 배경색 */
-    color: #666; /* 비활성화 시 텍스트 색상 */
-    cursor: not-allowed;
-}
-
-.nav-button:hover {
-    background-color: #007bff;  /* 마우스를 올리면 파란색으로 변환 */
-}
-
-nav {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-button:disabled {
-    background-color: #ccc;
-    color: #666;
-    cursor: not-allowed;
-}
-
-/* 타임 컨트롤 관련 디자인 */
+/* Time Control Styles */
 .time-period-container {
     display: flex;
     flex-direction: column;
@@ -272,12 +292,12 @@ button:disabled {
     margin-bottom: 10px;
 }
 
-.time-period label {
+.time-period label, .recording-control label {
     margin-right: 5px;
     font-weight: bold;
 }
 
-.time-period input {
+.time-period input, .recording-control input {
     margin-right: 10px;
 }
 
@@ -300,11 +320,6 @@ button:disabled {
     margin-bottom: 10px;
 }
 
-.recording-control label {
-    margin-right: 5px;
-    font-weight: bold;
-}
-
 .recording-control input {
     width: 50px;
     text-align: center;
@@ -322,103 +337,202 @@ button:disabled {
     width: 45%;
     padding: 10px;
 }
-/* 이미지 크기 조정 */
+
+/* Image and Modal Styles */
 img {
-    max-width: 1200px;     /* 가로 크기를 1200px로 증가 */
-    max-height: 1200px;    /* 세로 크기를 1200px로 증가 */
+    max-width: 100%;
+    height: auto;
     cursor: pointer;
-    object-fit: contain;   /* 이미지를 왜곡하지 않도록 비율을 유지 */
+    object-fit: contain;
     transition: transform 0.3s ease;
 }
 
-
-
-/* 모달 안 이미지 스타일링 */
-.modal-content {
-    width: 100%;            /* 너비를 100%로 설정 */
-    max-width: 1500px;       /* 최대 너비를 1500px로 증가 */
-    height: auto;            /* 세로 길이를 자동으로 조절 */
-    max-height: 90vh;        /* 최대 세로 높이를 화면의 90%로 설정 */
-    object-fit: contain;     /* 비율을 유지하며 이미지 크기 조정 */
+.modal-content img {
+    width: 100%;
+    max-width: 1500px;
+    height: auto;
+    max-height: 90vh;
+    object-fit: contain;
     border-radius: 10px;
 }
 
-/* 모달 스타일링 */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1;
-    left: 0;
-    top: 0;
-    width: 100%;          /* 모달 너비 전체 */
-    height: 100%;         /* 모달 높이 전체 */
-    background-color: rgba(0, 0, 0, 0.9);  /* 배경 어둡게 */
-    display: flex;
-    justify-content: center;
-    align-items: center;  /* 중앙 정렬 */
-}
-
-
-/* 닫기 버튼 스타일 */
-.close {
-    position: absolute;
-    top: 20px;
-    right: 30px;
-    font-size: 35px;
-    color: #ffffff;
-    cursor: pointer;
-}
-#forecastResults {
-    max-height: 400px; /* 적절한 높이를 지정하세요 */
-    padding: 10px;
-}
-img {
-    max-width: 100%; /* 이미지를 화면 크기에 맞추기 */
-    height: auto;    /* 이미지 비율 유지 */
-}
-@media screen and (max-width: 768px) {
-    /* 작은 화면일 때 레이아웃 조정 */
-    #forecastResults {
-        max-height: 300px;
-    }
-    img {
-        max-width: 100%;
-        height: auto;
-    }
-}
-
-.download-btn {
-    font-size: 16px;
-    color: white;
-    background-color: #28a745;  /* 기본 배경색 (초록색) */
-    border: none;
-    border-radius: 8px;  /* 둥근 테두리 */
-    cursor: pointer;
-    transition: background-color 0.3s ease;  /* 배경색 변환 시 부드러운 애니메이션 */
-}
-
-.download-btn:hover {
-    background-color: #007bff;  /* 마우스를 올리면 파란색으로 변환 */
-}
+/* Analysis Container Styles */
 .analysis-container {
     display: flex;
-    align-items: center; /* 수직 정렬 */
-    justify-content: center; /* 수평 정렬 (가운데로 배치) */
-    gap: 20px; /* 텍스트와 차트 사이 간격 */
-    width: 100%; /* 전체 너비 사용 */
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
 }
 
 ul.no-bullets {
-    width: 30%; /* 텍스트가 차지할 너비 */
+    width: 30%;
     margin: 0;
     padding: 0;
-    text-align: left; /* 리스트 텍스트는 왼쪽 정렬 */
+    text-align: left;
 }
 
 canvas {
-    width: 600px;  /* 고정된 너비 */
-    height: 400px; /* 고정된 높이 */
-    max-width: 600px;  /* 최대 너비 */
-    max-height: 400px; /* 최대 높이 */
+    width: 600px;
+    height: 400px;
+    max-width: 600px;
+    max-height: 400px;
 }
 
+/* Responsive Styles */
+@media screen and (max-width: 768px) {
+    .chart-item {
+        width: 100%;
+    }
+    
+    #forecastResults {
+        max-height: 300px;
+    }
+    
+    .analysis-container {
+        flex-direction: column;
+    }
+    
+    ul.no-bullets {
+        width: 100%;
+    }
+    
+    canvas {
+        width: 100%;
+        height: auto;
+    }
+}
+/* 시간 입력 필드와 숫자 입력 박스 공통 스타일 */
+input[type="time"], input[type="number"] {
+    padding: 8px 12px;
+    border: 2px solid #4CAF50;
+    border-radius: 5px;
+    font-size: 16px;
+    color: #333;
+    background-color: #fff;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    margin: 5px;
+    width: 120px; /* 너비 조정 */
+}
+
+/* 포커스 시 스타일 */
+input[type="time"]:focus, input[type="number"]:focus {
+    outline: none;
+    border-color: #45a049;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+/* 숫자 입력 박스 화살표 스타일 (Chrome, Safari, Edge, Opera) */
+input[type="number"]::-webkit-inner-spin-button, 
+input[type="number"]::-webkit-outer-spin-button { 
+    opacity: 1;
+    height: 30px;
+}
+
+/* 레이블 스타일 */
+label {
+    font-weight: bold;
+    margin-right: 10px;
+    color: #333;
+}
+
+/* 시간 설정 컨테이너 */
+.time-period {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+/* 녹음 시간 설정 컨테이너 */
+.recording-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 15px 0;
+}
+
+
+.horizontal-line {
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(to right, transparent, #333, transparent);
+    margin: 20px 0;
+}
+
+/* 테이블 컨테이너 스타일 */
+.table-container {
+    width: 100%;
+    max-width: 1600px; /* 최대 너비 유지 */
+    margin: 0 auto;
+    overflow-x: auto; /* 가로 스크롤 허용 */
+}
+
+/* 테이블 기본 스타일 */
+#data-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* 고정 레이아웃 사용 */
+}
+
+#data-table th, #data-table td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 열 너비 조정 */
+#data-table .column-num { width: 3%; }
+#data-table .column-filename { width: 22%; }
+#data-table .column-class { width: 8%; }
+#data-table .column-confidence { width: 7%; }
+#data-table .column-timestamp { width: 12%; }
+#data-table .column-audio { width: 28%; }
+#data-table .column-spectrogram { width: 12%; }
+#data-table .column-download { width: 8%; }
+
+/* 파일명 열 스타일 */
+#data-table .column-filename {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 오디오 플레이어 스타일 조정 */
+.audio-player {
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.audio-player button {
+    min-width: 30px;
+    margin-right: 5px;
+}
+
+.audio-player input[type="range"] {
+    flex-grow: 1;
+    margin: 0 5px;
+}
+
+/* 스펙트로그램 이미지 크기 조정 */
+.spectrogram-image {
+    max-width: 100%;
+    height: auto;
+}
+
+/* 반응형 디자인을 위한 미디어 쿼리 */
+@media screen and (max-width: 1200px) {
+    #data-table .column-filename { width: 20%; }
+    #data-table .column-audio { width: 30%; }
+}
+
+@media screen and (max-width: 992px) {
+    #data-table .column-filename { width: 18%; }
+    #data-table .column-audio { width: 32%; }
+}

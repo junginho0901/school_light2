@@ -633,11 +633,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const newTimePeriod = document.createElement('div');
         newTimePeriod.classList.add('time-period');
         newTimePeriod.innerHTML = `
-        <label for="startTime${timePeriodCount}">시작 시간:</label>
-        <input type="time" id="startTime${timePeriodCount}" name="startTime${timePeriodCount}">
-        <label for="endTime${timePeriodCount}">종료 시간:</label>
-        <input type="time" id="endTime${timePeriodCount}" name="endTime${timePeriodCount}">
-        <button class="remove-time-btn">삭제</button>
+        <label for="startTime1">시작 시간:</label>
+        <input type="time" id="startTime1" name="startTime">
+        <label for="endTime1">종료 시간:</label>
+        <input type="time" id="endTime1" name="endTime">
+        <button class="remove-time-btn btn">삭제</button>
     `;
         timePeriodsDiv.appendChild(newTimePeriod);
 
@@ -743,9 +743,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 3600000); // 1시간마다 실행
 
         const deleteButtons = document.querySelectorAll('.remove-time-btn');
-    deleteButtons.forEach(button => {
-        button.disabled = true;
-    });
+        deleteButtons.forEach(button => {
+            button.disabled = true;
+        });
 
         // 제어 버튼 상태 업데이트
         startControlButton.disabled = true;
@@ -803,10 +803,10 @@ document.addEventListener('DOMContentLoaded', function () {
         clearInterval(controlInterval);  // 설정된 setInterval 중지
         clearInterval(autoControlInterval);  // 자동 제어 중지
         // 삭제 버튼들 활성화
-    const deleteButtons = document.querySelectorAll('.remove-time-btn');
-    deleteButtons.forEach(button => {
-        button.disabled = false;
-    });
+        const deleteButtons = document.querySelectorAll('.remove-time-btn');
+        deleteButtons.forEach(button => {
+            button.disabled = false;
+        });
         addTimeButton.disabled = false;
 
         // 제어 및 녹음 버튼 상태 초기화

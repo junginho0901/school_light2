@@ -915,14 +915,32 @@ from tensorflow.keras.callbacks import Callback, EarlyStopping
 
 class PrintCallback(Callback):
     def on_epoch_begin(self, epoch, logs=None):
-        print(f'\nEpoch {epoch+1} 시작')
+        message = f'\nEpoch {epoch+1} 시작'
+        print(message)
+        self.update_progress(message, epoch)
     
     def on_epoch_end(self, epoch, logs=None):
-        print(f'Epoch {epoch+1} 종료 - loss: {logs["loss"]:.4f}, accuracy: {logs["accuracy"]:.4f}, val_loss: {logs["val_loss"]:.4f}, val_accuracy: {logs["val_accuracy"]:.4f}')
+        message = f'Epoch {epoch+1} 종료 - loss: {logs["loss"]:.4f}, accuracy: {logs["accuracy"]:.4f}, val_loss: {logs["val_loss"]:.4f}, val_accuracy: {logs["val_accuracy"]:.4f}'
+        print(message)
+        self.update_progress(message, epoch, logs)
     
     def on_batch_end(self, batch, logs=None):
         if batch % 100 == 0:  # 100 배치마다 한 번씩 출력
-            print(f' - 배치 {batch+1}: loss: {logs["loss"]:.4f}, accuracy: {logs["accuracy"]:.4f}')
+            message = f' - 배치 {batch+1}: loss: {logs["loss"]:.4f}, accuracy: {logs["accuracy"]:.4f}'
+            print(message)
+            self.update_progress(message)
+
+    def update_progress(self, message, epoch=None, logs=None):
+        global current_progress
+        current_progress['status'] = message
+        if epoch is not None:
+            current_progress['epoch'] = epoch + 1
+            current_progress['total_epochs'] = self.params['epochs']
+        if logs:
+            current_progress['loss'] = logs.get('loss', 0)
+            current_progress['accuracy'] = logs.get('accuracy', 0)
+            current_progress['val_loss'] = logs.get('val_loss', 0)
+            current_progress['val_accuracy'] = logs.get('val_accuracy', 0)
 
 def train_model(model, train_generator, val_generator, epochs, batch_size):
     print_callback = PrintCallback()
