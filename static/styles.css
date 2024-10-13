@@ -289,18 +289,30 @@ nav .btn span, nav .nav-button span, nav #dashboardButton span {
     width: 100%;
     height: 100%;
     overflow: auto;
-    background-color: rgba(0,0,0,0.9);
+    background-color: rgba(0,0,0,0.4);
 }
 
 .modal-content, .modal-content_dash {
-    background-color: #ffffff;
-    color: #333333;
-    margin: 15% auto;
+    background-color: #fefefe;
+    margin: 2% auto; /* 상단 여백 줄임 */
     padding: 20px;
     border: 1px solid #888;
-    width: 80%;
-    max-width: 800px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    width: 90%; /* 너비 증가 */
+    max-width: 1200px; /* 최대 너비 설정 */
+    height: 90%; /* 높이 증가 */
+    overflow-y: auto; /* 내용이 넘칠 경우 스크롤 */
+}
+.modal-content_dash {
+    background-color: #fefefe;
+    margin: 2% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 95%;
+    max-width: 1100px; /* 최대 너비를 더 늘림 */
+    height: 90vh; /* 높이를 뷰포트의 90%로 설정 */
+    overflow: hidden; /* 모든 스크롤바 제거 */
+    display: flex;
+    flex-direction: column;
 }
 
 .close {
@@ -319,20 +331,36 @@ nav .btn span, nav .nav-button span, nav #dashboardButton span {
 
 /* Chart Styles */
 .charts-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-around;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    flex-grow: 1;
+    overflow: hidden;
 }
+
 
 .chart-item {
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-    width: 45%;
-    height: 400px;
+    height: 90%; /* 높이를 100%로 설정하여 컨테이너에 맞춤 */
+    min-height: 0; /* 차트가 축소되는 것을 방지 */
+}
+.chart-item h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
 }
 
+.chart-item canvas {
+    max-height: 100%;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Button container */
+.dashboard-buttons {
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
 /* Notification Styles */
 .notification-container {
     position: fixed;

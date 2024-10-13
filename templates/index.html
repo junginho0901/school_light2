@@ -112,8 +112,16 @@
                     <h3>시간대별 신호 조정 횟수</h3>
                     <canvas id="signalAdjustmentChart"></canvas>
                 </div>
+                <div class="chart-item">
+                    <h3>일일 소리 감지 추이</h3>
+                    <canvas id="dailyDetectionTrendChart"></canvas>
+                </div>
             </div>
-            <button id="resetButton" class="btn">데이터 리셋</button>
+            <div class="dashboard-buttons">
+                <button id="resetButton" class="btn">데이터 리셋</button>
+                <button id="downloadPredictionsLog" class="btn">예측 로그 다운로드</button>
+                <button id="downloadAdjustmentsLog" class="btn">신호 조정 로그 다운로드</button>
+            </div>
         </div>
     </div>
 

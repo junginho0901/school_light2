@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let isRedLight = true;
     let isExtendedGreenScheduled = false;
     let consecutiveSchoolSounds = 0;
-    let classDistributionChart, hourlyDetectionChart, signalAdjustmentChart;
+    let classDistributionChart, hourlyDetectionChart, signalAdjustmentChart, dailyDetectionTrendChart;
     let updateInterval;
     let confidencesLog = []; // 예측 결과 저장용 배열
 
@@ -445,6 +445,55 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         }
+        if (document.getElementById('dailyDetectionTrendChart')) {
+            dailyDetectionTrendChart = new Chart(document.getElementById('dailyDetectionTrendChart'), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '일일 총 감지 횟수',
+                        data: [],
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                displayFormats: {
+                                    day: 'MM-dd'  // 'DD'를 'dd'로 수정
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: '날짜'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '감지 횟수'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '일일 소리 감지 추이'
+                        }
+                    }
+                }
+            });
+        } else {
+            console.warn('Daily detection trend chart element not found');
+        }
+    
     }
 
     function updateCharts() {
@@ -459,10 +508,11 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(data => {
                 console.log("Received data:", data);
 
-                if (data && data.class_counts && data.hourly_data && data.hourly_signal_data) {
+                if (data && data.class_counts && data.hourly_data && data.hourly_signal_data && data.daily_detection_data) {
                     updateClassDistributionChart(data.class_counts);
                     updateHourlyDetectionChart(data.hourly_data);
                     updateSignalAdjustmentChart(data.hourly_signal_data);
+                    updateDailyDetectionTrendChart(data.daily_detection_data);
                 } else {
                     console.warn("Received incomplete data from server:", data);
                 }
@@ -926,6 +976,33 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
+    const downloadPredictionsLogBtn = document.getElementById('downloadPredictionsLog');
+    const downloadAdjustmentsLogBtn = document.getElementById('downloadAdjustmentsLog');
 
+    if (downloadPredictionsLogBtn) {
+        downloadPredictionsLogBtn.addEventListener('click', function() {
+            window.location.href = '/download-log/predictions';
+        });
+    }
+
+    if (downloadAdjustmentsLogBtn) {
+        downloadAdjustmentsLogBtn.addEventListener('click', function() {
+            window.location.href = '/download-log/adjustments';
+        });
+    }
+    function updateDailyDetectionTrendChart(dailyData) {
+        if (!dailyDetectionTrendChart) {
+            console.warn('Daily detection trend chart not initialized');
+            return;
+        }
+        dailyDetectionTrendChart.data.labels = dailyData.map(item => new Date(item.date));  // 문자열 대신 Date 객체 사용
+        dailyDetectionTrendChart.data.datasets[0].data = dailyData.map(item => ({
+            x: new Date(item.date),  // x 값으로 Date 객체 사용
+            y: item.count
+        }));
+        dailyDetectionTrendChart.update();
+    }
+    
+    
 
 });
