@@ -17,66 +17,80 @@
     <div class="container">
         <header>
             <h1>보행자 신호등 & 오디오 분류기 시스템</h1>
-            <nav>
-                <a href="{{ url_for('data_management') }}" class="nav-button btn">데이터 관리</a>
-                <button id="dashboardButton" class="nav-button btn">대시보드 보기</button>
-                <a href="{{ url_for('forecast_page') }}" class="nav-button btn">ARIMA 예측</a>
-                <a href="{{ url_for('finetune_page') }}" class="nav-button btn">모델 파인튜닝</a>
-            </nav>
         </header>
-        <main>
-            <div class="traffic-light-container">
-                <div class="pedestrian-light">
-                    <div class="light red"></div>
-                    <div class="light green"></div>
-                </div>
-                <div class="timer"></div>
-            </div>
-            <div class="control-panel">
-                <button id="recordButton" class="btn">실시간 판단 시작</button>
-                <div class="horizontal-line"></div>
-                <h1>자동 제어 설정</h1>
+        
+        <main class="flex-container">
+            <!-- 왼쪽 컨텐츠: 메뉴 및 제어 설정 -->
+            <div class="left-panel">
+                <h1>MENU</h1>
+                <nav>
+                   
 
-                <div class="time-period-container">
-                    <div id="timePeriodsDiv">
-                        <div class="time-period">
-                            <label for="startTime1">시작 시간:</label>
-                            <input type="time" id="startTime1" name="startTime">
-                            <label for="endTime1">종료 시간:</label>
-                            <input type="time" id="endTime1" name="endTime">
-                            <button class="remove-time-btn btn">삭제</button>
+                    <a href="{{ url_for('data_management') }}" class="nav-button btn">데이터 관리</a>
+                    <button id="dashboardButton" class="nav-button btn">대시보드 보기</button>
+                    <a href="{{ url_for('forecast_page') }}" class="nav-button btn">ARIMA 예측</a>
+                    <a href="{{ url_for('finetune_page') }}" class="nav-button btn">모델 파인튜닝</a>
+                </nav>
+                <div class="horizontal-line"></div>
+
+                <div class="control-panel">
+                    <h1>실시간 판단 / 자동 제어 설정</h1>
+                    <button id="recordButton" class="btn">실시간 판단 시작</button>
+
+                    <div class="time-period-container">
+                        <div id="timePeriodsDiv">
+                            <div class="time-period">
+                                <label for="startTime1">시작 시간:</label>
+                                <input type="time" id="startTime1" name="startTime">
+                                <label for="endTime1">종료 시간:</label>
+                                <input type="time" id="endTime1" name="endTime">
+                                <button class="remove-time-btn btn">삭제</button>
+                            </div>
+                        </div>
+
+                        <button id="addTimeButton" class="btn">자동 제어 시간대 추가</button>
+
+                        <div class="recording-control">
+                            <label for="recordDuration">자동 제어 1시간 주시 녹음 시간 설정 (분):</label>
+                            <input type="number" id="recordDuration" value="5" min="0.1" max="60" step="any">
+                        </div>
+
+                        <div class="weekday-control">
+                            <span id="weekdayLabel">자동 제어 중지 날짜:</span>
+                            <div id="weekdayButtons" aria-labelledby="weekdayLabel">
+                                <button class="weekday-btn btn" data-weekday="1">월</button>
+                                <button class="weekday-btn btn" data-weekday="2">화</button>
+                                <button class="weekday-btn btn" data-weekday="3">수</button>
+                                <button class="weekday-btn btn" data-weekday="4">목</button>
+                                <button class="weekday-btn btn" data-weekday="5">금</button>
+                                <button class="weekday-btn btn" data-weekday="6">토</button>
+                                <button class="weekday-btn btn" data-weekday="0">일</button>
+                            </div>
+                        </div>
+
+                        <div class="control-buttons">
+                            <button id="startControl" class="btn btn-success">자동 제어 시작</button>
+                            <button id="stopControl" class="btn btn-danger" disabled>자동 제어 중지</button>
                         </div>
                     </div>
-                
-                    <button id="addTimeButton" class="btn">자동 제어 시간대 추가</button>
-                
-                    <div class="recording-control">
-                        <label for="recordDuration">자동 제어 1시간 주시 녹음 시간 설정 (분):</label>
-                        <input type="number" id="recordDuration" value="5" min="0.1" max="60" step="any">
-                    </div>
-                    
-                    <div class="weekday-control">
-                        <span id="weekdayLabel">자동 제어 중지 날짜:</span>
-                        <div id="weekdayButtons" aria-labelledby="weekdayLabel">
-                            <button class="weekday-btn btn" data-weekday="1">월</button>
-                            <button class="weekday-btn btn" data-weekday="2">화</button>
-                            <button class="weekday-btn btn" data-weekday="3">수</button>
-                            <button class="weekday-btn btn" data-weekday="4">목</button>
-                            <button class="weekday-btn btn" data-weekday="5">금</button>
-                            <button class="weekday-btn btn" data-weekday="6">토</button>
-                            <button class="weekday-btn btn" data-weekday="0">일</button>
-                        </div>
-                    </div>
-                    
-                    <div class="control-buttons">
-                        <button id="startControl" class="btn btn-success">자동 제어 시작</button>
-                        <button id="stopControl" class="btn btn-danger" disabled>자동 제어 중지</button>
+
+                    <div class="results-panel">
+                        <h2>예측 결과</h2>
+                        <div id="results"></div>
                     </div>
                 </div>
-                
-            <div class="results-panel">
-                <h2>예측 결과</h2>
-                <div id="results"></div>
+            </div>
+
+            <!-- 오른쪽 시뮬레이터 -->
+            <div class="simulator-container">
+                <h2>보행자 신호등 시뮬레이터</h2>
+                <div class="traffic-light-container">
+                    <div class="pedestrian-light">
+                        <div class="light red"></div>
+                        <div class="light green"></div>
+                    </div>
+                    <div class="timer">10</div>
+                </div>
             </div>
         </main>
     </div>
