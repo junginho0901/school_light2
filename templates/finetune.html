@@ -15,9 +15,26 @@
             </nav>
         </header>
         <main>
+            <!-- 현재 모델 정보 -->
+            <div id="currentModel" class="info-panel">
+                <h3>현재 사용 중인 모델</h3>
+                <p id="currentModelPath">모델 정보를 불러오는 중...</p>
+                <p>마지막 교체 시간: <span id="lastSwapTime">-</span></p>
+                <div id="modelStatus" class="status-badge">상태: <span id="statusText">활성</span></div>
+            </div>
+
+            <!-- 모델 교체 영역 -->
+            <div id="modelDropArea" class="drop-area">
+                <p>새로운 모델 파일(.h5)을 여기에 드래그하거나 클릭하여 선택하세요.</p>
+                <input type="file" id="modelFileElem" name="model" accept=".h5" onchange="handleModelFile(this.files)" hidden>
+                <label class="button btn" for="modelFileElem">모델 선택</label>
+                <div id="modelFileInfo"></div>
+            </div>
+
+            <!-- 파인튜닝 데이터 영역 -->
             <div id="dropArea">
                 <form id="uploadForm" enctype="multipart/form-data">
-                    <p>ZIP 파일을 여기에 드래그하거나 클릭하여 선택하세요.</p>
+                    <p>파인튜닝할 ZIP 파일을 여기에 드래그하거나 클릭하여 선택하세요.</p>
                     <p style="font-size: 12px;">학습 시 오류가 뜬다면 zip파일 인코딩 형식을 바꿔서 시도 해보세요.</p>
 
                     <input type="file" id="fileElem" name="dataFolder" accept=".zip" onchange="handleFiles(this.files)"
@@ -62,8 +79,165 @@
         let startButton = document.getElementById('startFineTuning');
         let selectedFile = null;
 
+        // 현재 모델 정보 로드
+        // 현재 모델 정보 로드
+fetch('/get-current-model')
+    .then(response => response.json())
+    .then(data => {
+        const currentModelPath = document.getElementById('currentModelPath');
+        const statusText = document.getElementById('statusText');
+        const lastSwapTime = document.getElementById('lastSwapTime');
+
+        if (data.model_path === "모델 경로를 찾을 수 없음") {
+            currentModelPath.textContent = "모델 경로를 찾을 수 없음";
+            statusText.textContent = "오류";
+            statusText.style.color = "red";
+        } else {
+            currentModelPath.textContent = data.model_path;
+            statusText.textContent = data.status;
+            statusText.style.color = data.status === "활성" ? "green" : "red";
+        }
+        
+        lastSwapTime.textContent = data.swap_time;
+    })
+    .catch(error => {
+        console.error('모델 정보 로드 실패:', error);
+        document.getElementById('currentModelPath').textContent = "모델 정보를 불러오는 중 오류가 발생했습니다";
+        document.getElementById('statusText').textContent = "오류";
+        document.getElementById('statusText').style.color = "red";
+    });
+
+        // 모델 파일 처리 함수
+        function handleModelFile(files) {
+            if (files.length > 0) {
+                const modelFile = files[0];
+                if (modelFile.name.endsWith('.h5')) {
+                    document.getElementById('modelFileInfo').textContent = `선택된 모델: ${modelFile.name}`;
+                    handleModelSwap(modelFile);
+                } else {
+                    document.getElementById('modelFileInfo').textContent = "오류: .h5 파일만 허용됩니다.";
+                }
+            }
+        }
+
+        // 모델 교체 처리 함수
+        // 모델 교체 처리 함수
+async function handleModelSwap(modelFile) {
+    const formData = new FormData();
+    formData.append('model', modelFile);
+    
+    const statusText = document.getElementById('statusText');
+    const lastSwapTime = document.getElementById('lastSwapTime');
+    
+    try {
+        statusText.textContent = "교체 중...";
+        statusText.style.color = "orange";
+        
+        const response = await fetch('/swap-model', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            statusText.textContent = "정상 작동 중";
+            statusText.style.color = "green";
+            document.getElementById('currentModelPath').textContent = result.new_model_path;
+            lastSwapTime.textContent = result.swap_time;
+            alert(`모델이 성공적으로 교체되었습니다.\n기존 모델 백업 위치: ${result.backup_path}`);
+        } else {
+            statusText.textContent = "교체 실패";
+            statusText.style.color = "red";
+            alert(`모델 교체 실패: ${result.error}`);
+        }
+    } catch (error) {
+        statusText.textContent = "오류 발생";
+        statusText.style.color = "red";
+        console.error('모델 교체 중 오류:', error);
+        alert('모델 교체 중 오류가 발생했습니다.');
+    }
+}
+// 모델 정보 새로고침 함수
+function refreshModelInfo() {
+    fetch('/get-current-model')
+        .then(response => response.json())
+        .then(data => {
+            const currentModelPath = document.getElementById('currentModelPath');
+            const statusText = document.getElementById('statusText');
+            const lastUpdateTime = document.getElementById('lastSwapTime');
+
+            if (data.success) {
+                // 원본 파일명 표시
+                currentModelPath.textContent = data.display_name;
+                statusText.textContent = data.status;
+                lastUpdateTime.textContent = data.last_updated || data.swap_time;
+                
+                if (data.status === "활성") {
+                    statusText.style.color = "green";
+                    statusText.parentElement.className = "status-badge active";
+                } else {
+                    statusText.style.color = "red";
+                    statusText.parentElement.className = "status-badge error";
+                }
+            } else {
+                currentModelPath.textContent = "모델 정보를 불러올 수 없음";
+                statusText.textContent = "오류";
+                statusText.style.color = "red";
+                lastUpdateTime.textContent = "-";
+                statusText.parentElement.className = "status-badge error";
+            }
+        })
+        .catch(error => {
+            console.error('모델 정보 로드 실패:', error);
+            document.getElementById('currentModelPath').textContent = "오류 발생";
+            document.getElementById('statusText').textContent = "오류";
+            document.getElementById('statusText').style.color = "red";
+            document.getElementById('lastSwapTime').textContent = "-";
+        });
+}
+
+// 페이지 로드 시 초기 정보 로드
+document.addEventListener('DOMContentLoaded', refreshModelInfo);
+
+// 10초마다 자동 새로고침
+setInterval(refreshModelInfo, 5000);
+
+
+
+async function handleModelSwap(modelFile) {
+    const formData = new FormData();
+    formData.append('model', modelFile);
+    
+    try {
+        const response = await fetch('/swap-model', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert('모델이 성공적으로 교체되었습니다.');
+            // 모델 정보 새로고침
+            refreshModelInfo();
+        } else {
+            alert(`모델 교체 실패: ${result.error}`);
+        }
+    } catch (error) {
+        console.error('모델 교체 중 오류:', error);
+        alert('모델 교체 중 오류가 발생했습니다.');
+    }
+}
+
+// 페이지 로드 시 초기 정보 로드
+document.addEventListener('DOMContentLoaded', refreshModelInfo);
+
+// 30초마다 모델 정보 자동 새로고침
+setInterval(refreshModelInfo, 30000);
+
+        // 드래그 앤 드롭 이벤트 처리
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropArea.addEventListener(eventName, preventDefaults, false);
+            modelDropArea.addEventListener(eventName, preventDefaults, false);
         });
 
         function preventDefaults(e) {
@@ -73,10 +247,12 @@
 
         ['dragenter', 'dragover'].forEach(eventName => {
             dropArea.addEventListener(eventName, highlight, false);
+            modelDropArea.addEventListener(eventName, e => modelDropArea.classList.add('highlight'), false);
         });
 
         ['dragleave', 'drop'].forEach(eventName => {
             dropArea.addEventListener(eventName, unhighlight, false);
+            modelDropArea.addEventListener(eventName, e => modelDropArea.classList.remove('highlight'), false);
         });
 
         function highlight(e) {
@@ -88,6 +264,11 @@
         }
 
         dropArea.addEventListener('drop', handleDrop, false);
+        modelDropArea.addEventListener('drop', e => {
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            handleModelFile(files);
+        }, false);
 
         function handleDrop(e) {
             let dt = e.dataTransfer;
@@ -165,7 +346,7 @@
                             if (data.status === "학습 완료" && data.model_path) {
                                 $('#result h2').text("파인튜닝 완료");
                                 $('#downloadLink').attr('href', `/download-model/${data.model_path}`);
-                                $('#downloadLink').show();1
+                                $('#downloadLink').show();
                             } else {
                                 $('#result h2').text("파인튜닝 실패");
                                 $('#downloadLink').hide();
@@ -185,5 +366,4 @@
         });
     </script>
 </body>
-
 </html>
