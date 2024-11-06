@@ -310,32 +310,52 @@ def get_stats():
         hourly_data = []
         hourly_signal_data = []
         class_counts_24h = defaultdict(int)
+        daily_detection_data = []
 
-        for i in range(24):
-            hour = (current_time - timedelta(hours=i)).strftime('%Y-%m-%d %H:00:00')
+        # 최근 30일간의 데이터 처리
+        for i in range(30):
+            date = (current_time - timedelta(days=i)).strftime('%Y-%m-%d')
+            daily_count = 0
             
-            counts = dict(hourly_detections.get(hour, {}))
-            if not counts:
-                counts = {class_name: 0 for class_name in index_to_class.values()}
-            hourly_data.append({
-                'hour': hour,
-                'counts': counts
+            for hour in range(24):
+                hour_datetime = datetime.strptime(f"{date} {hour:02d}:00:00", '%Y-%m-%d %H:%M:%S')
+                hour_key = hour_datetime.strftime('%Y-%m-%d %H:00:00')
+                
+                counts = dict(hourly_detections.get(hour_key, {}))
+                if not counts:
+                    counts = {class_name: 0 for class_name in index_to_class.values()}
+                
+                if i < 1:  # 최근 24시간 데이터만 hourly_data에 추가
+                    hourly_data.append({
+                        'hour': hour_key,
+                        'counts': counts
+                    })
+
+                for class_name, count in counts.items():
+                    class_counts_24h[class_name] += count
+                    daily_count += count
+
+                if i < 1:  # 최근 24시간 데이터만 hourly_signal_data에 추가
+                    signal_adjust_count = hourly_signal_adjustments.get(hour_key, 0)
+                    hourly_signal_data.append({
+                        'hour': hour_key,
+                        'signal_adjustments': signal_adjust_count
+                    })
+            
+            daily_detection_data.append({
+                'date': date,
+                'count': daily_count
             })
 
-            for class_name, count in counts.items():
-                class_counts_24h[class_name] += count
-
-            signal_adjust_count = hourly_signal_adjustments.get(hour, 0)
-            hourly_signal_data.append({
-                'hour': hour,
-                'signal_adjustments': signal_adjust_count
-            })
+        # 최신 데이터가 먼저 오도록 정렬
+        daily_detection_data.reverse()
 
         stats_data = {
             'class_counts': dict(class_counts_24h),
             'hourly_data': hourly_data,
             'hourly_signal_data': hourly_signal_data,
-            'signal_adjustments': signal_adjustments
+            'signal_adjustments': signal_adjustments,
+            'daily_detection_data': daily_detection_data
         }
 
         print("Stats data being sent:", stats_data)  # 로깅 추가
@@ -359,7 +379,7 @@ def adjust_signal():
         log_adjustment_to_csv(school_sound_confidences)
 
     try:
-        socketio.emit('notification', {'message': "신호가 조정되었습니다."})
+        socketio.emit('notification', {'message': "자동 제어 시간대 또는 실시간으로 아이들 소리가 확인 되어 신호가 조정되었습니다."})
     except Exception as e:
         print(f"SocketIO emit error: {str(e)}")
 
@@ -1089,6 +1109,326 @@ def setup_upload_folder(app):
     os.chmod(upload_folder, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
     
     logger.info(f"Upload folder set up with appropriate permissions: {upload_folder}")
+
+
+@app.route('/download-log/<log_type>')
+def download_log(log_type):
+    if log_type == 'predictions':
+        file_path = csv_file_path
+        filename = 'predictions_log.csv'
+    elif log_type == 'adjustments':
+        file_path = adjustment_csv_file_path
+        filename = 'signal_adjustments_log.csv'
+    else:
+        return "Invalid log type", 400
+
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True, download_name=filename)
+    else:
+        return "Log file not found", 404
+
+@app.route('/get-current-model', methods=['GET'])
+def get_current_model():
+    """현재 모델 정보를 반환하는 엔드포인트"""
+    try:
+        display_manager = ModelDisplayManager()
+        model_info = display_manager.get_current_model_info()
+        
+        if not model_info:
+            return jsonify({
+                'success': False,
+                'model_path': "모델 정보를 찾을 수 없음",
+                'status': "오류",
+                'swap_time': "-",
+                'display_name': "-"
+            })
+
+        model_path = os.path.join(display_manager.model_dir, model_info['current_model_name'])
+        
+        if os.path.exists(model_path):
+            status = "활성"
+            modified_time = datetime.fromtimestamp(os.path.getmtime(model_path))
+            modified_time_str = modified_time.strftime('%Y%m%d_%H%M%S')
+        else:
+            return jsonify({
+                'success': False,
+                'model_path': "모델 파일을 찾을 수 없음",
+                'status': "오류",
+                'swap_time': "-",
+                'display_name': "-"
+            })
+
+        return jsonify({
+            'success': True,
+            'model_path': model_path,
+            'status': status,
+            'last_modified': modified_time_str,
+            'display_name': model_info['original_filename'],
+            'last_updated': model_info['last_updated']
+        })
+
+    except Exception as e:
+        logging.error(f"모델 정보 조회 중 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'model_path': "모델 정보를 불러오는 중 오류가 발생했습니다",
+            'status': "오류",
+            'swap_time': "-",
+            'display_name': "-",
+            'error': str(e)
+        })
+ 
+def swap_model(model_file):
+    """모델 교체 함수"""
+    try:
+        display_manager = ModelDisplayManager()
+        
+        # 임시 파일로 저장
+        temp_path = os.path.join(display_manager.model_dir, 'temp_model.h5')
+        model_file.save(temp_path)
+
+        try:
+            # 모델 검증
+            new_model = tf.keras.models.load_model(temp_path)
+            if new_model.input_shape != (None, 224, 224, 3):
+                raise ValueError("모델의 입력 형태가 맞지 않습니다.")
+            if new_model.output_shape[-1] != 10:
+                raise ValueError("모델의 출력 클래스 수가 맞지 않습니다.")
+
+            # 새 모델 정보 업데이트 및 파일명 생성
+            new_filename = display_manager.update_model_info(model_file.filename)
+            new_model_path = os.path.join(display_manager.model_dir, new_filename)
+
+            # 백업 디렉토리 생성
+            backup_dir = os.path.join(display_manager.model_dir, 'backup')
+            os.makedirs(backup_dir, exist_ok=True)
+
+            # 기존 모델 백업
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            current_info = display_manager.get_current_model_info()
+            if current_info:
+                old_model_path = os.path.join(display_manager.model_dir, current_info['current_model_name'])
+                if os.path.exists(old_model_path):
+                    backup_path = os.path.join(backup_dir, f"backup_{timestamp}_{current_info['original_filename']}")
+                    shutil.move(old_model_path, backup_path)
+
+            # 새 모델 적용
+            shutil.move(temp_path, new_model_path)
+
+            # 시스템 모델 경로에 복사
+            system_model_path = os.path.join(display_manager.model_dir, 'fine_tuned_mobilenetv2_spectrogram_model_0827_50epoch.h5')
+            shutil.copy2(new_model_path, system_model_path)
+
+            # 교체 로그 기록
+            with open(os.path.join(display_manager.current_dir, 'model_swap_log.txt'), 'a', encoding='utf-8') as f:
+                f.write(f"{timestamp}: 모델 교체 완료 ({model_file.filename})\n")
+
+            # 전역 모델 업데이트
+            global model
+            model = new_model
+
+            return True, {
+                'success': True,
+                'message': '모델이 성공적으로 교체되었습니다.',
+                'new_model_name': new_filename,
+                'original_filename': model_file.filename,
+                'swap_time': timestamp
+            }
+
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+    except Exception as e:
+        logging.error(f"모델 교체 중 오류: {str(e)}")
+        return False, {
+            'success': False,
+            'error': str(e)
+        }
+
+@app.route('/swap-model', methods=['POST'])
+def handle_model_swap():
+    """모델 교체 요청을 처리하는 엔드포인트"""
+    try:
+        if 'model' not in request.files:
+            return jsonify({'success': False, 'error': '모델 파일이 없습니다.'}), 400
+            
+        model_file = request.files['model']
+        if not model_file.filename.endswith('.h5'):
+            return jsonify({'success': False, 'error': '잘못된 파일 형식입니다. .h5 파일만 허용됩니다.'}), 400
+        
+        success, response_data = swap_model(model_file)  # app 인자 제거
+        
+        if success:
+            return jsonify(response_data)
+        else:
+            return jsonify(response_data), 500
+            
+    except Exception as e:
+        logging.error(f"모델 교체 처리 중 오류 발생: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+    
+
+import os
+from datetime import datetime
+from flask import jsonify
+
+def get_model_info():
+    """
+    현재 사용 중인 모델의 정보를 가져오는 함수
+    """
+    try:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        model_dir = os.path.join(current_dir, 'model')
+        model_path = os.path.join(model_dir, 'fine_tuned_mobilenetv2_spectrogram_model_0827_50epoch.h5')
+        log_path = os.path.join(current_dir, 'model_swap_log.txt')
+        
+        # 모델 파일 존재 여부 및 수정 시간 확인
+        if os.path.exists(model_path):
+            model_modified_time = datetime.fromtimestamp(os.path.getmtime(model_path))
+            status = "활성"
+            
+            # 로그 파일에서 마지막 교체 시간 확인
+            swap_time = "기록 없음"
+            if os.path.exists(log_path):
+                with open(log_path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    if lines:
+                        last_line = lines[-1].strip()
+                        swap_time = last_line.split(':')[0]
+            
+            return {
+                'success': True,
+                'model_path': model_path,
+                'status': status,
+                'swap_time': swap_time,
+                'last_modified': model_modified_time.strftime('%Y%m%d_%H%M%S')
+            }
+        else:
+            return {
+                'success': False,
+                'error': '모델 파일을 찾을 수 없습니다.',
+                'status': '오류',
+                'swap_time': '-'
+            }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e),
+            'status': '오류',
+            'swap_time': '-'
+        }
+
+
+class ModelDisplayManager:
+    def __init__(self):
+        self.current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.model_dir = os.path.join(self.current_dir, 'model')
+        self.model_info_path = os.path.join(self.model_dir, 'current_model_info.json')
+        self.initialize_model_info()
+
+    def initialize_model_info(self):
+        """모델 정보 파일 초기화"""
+        if not os.path.exists(self.model_dir):
+            os.makedirs(self.model_dir)
+            
+        if not os.path.exists(self.model_info_path):
+            initial_info = {
+                'current_model_name': 'fine_tuned_mobilenetv2_spectrogram_model_0827_50epoch.h5',
+                'original_filename': '기본 모델',
+                'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            self.save_model_info(initial_info)
+
+    def save_model_info(self, info):
+        """모델 정보 저장"""
+        with open(self.model_info_path, 'w', encoding='utf-8') as f:
+            json.dump(info, f, ensure_ascii=False, indent=2)
+
+    def update_model_info(self, original_filename):
+        """새 모델 정보 업데이트"""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        new_model_name = f'model_{timestamp}.h5'
+        
+        info = {
+            'current_model_name': new_model_name,
+            'original_filename': original_filename,
+            'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        self.save_model_info(info)
+        return new_model_name
+
+    def get_current_model_info(self):
+        """현재 모델 정보 조회"""
+        try:
+            with open(self.model_info_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logging.error(f"모델 정보 파일 읽기 실패: {str(e)}")
+            return None
+        
+
+class ModelTracker:
+    def __init__(self):
+        self.current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.model_dir = os.path.join(self.current_dir, 'model')
+        self.metadata_path = os.path.join(self.model_dir, 'model_metadata.json')
+        self.initialize_metadata()
+
+    def initialize_metadata(self):
+        """메타데이터 파일 초기화 또는 생성"""
+        if not os.path.exists(self.model_dir):
+            os.makedirs(self.model_dir)
+            
+        if not os.path.exists(self.metadata_path):
+            default_metadata = {
+                'current_model': {
+                    'filename': 'fine_tuned_mobilenetv2_spectrogram_model_0827_50epoch.h5',
+                    'display_name': '기본 모델',
+                    'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'last_modified': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                },
+                'model_history': []
+            }
+            with open(self.metadata_path, 'w', encoding='utf-8') as f:
+                json.dump(default_metadata, f, ensure_ascii=False, indent=2)
+
+    def update_model_info(self, new_model_file, original_filename):
+        """새 모델 정보 업데이트"""
+        try:
+            # 메타데이터 로드
+            with open(self.metadata_path, 'r', encoding='utf-8') as f:
+                metadata = json.load(f)
+
+            # 현재 모델을 히스토리에 추가
+            if metadata['current_model']:
+                metadata['model_history'].append(metadata['current_model'])
+
+            # 새 모델 정보 생성
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            new_filename = f"model_{timestamp}.h5"
+            
+            # 새 모델 정보 업데이트
+            metadata['current_model'] = {
+                'filename': new_filename,
+                'display_name': original_filename,
+                'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'last_modified': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+
+            # 메타데이터 저장
+            with open(self.metadata_path, 'w', encoding='utf-8') as f:
+                json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+            return new_filename
+
+        except Exception as e:
+            logging.error(f"모델 정보 업데이트 중 오류: {str(e)}")
+            raise
+
 
 if __name__ == '__main__':
     app.config['UPLOAD_FOLDER'] = 'uploads'
